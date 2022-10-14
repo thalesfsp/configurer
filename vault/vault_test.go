@@ -3,13 +3,52 @@ package vault
 
 import (
 	"context"
+	"net"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/hashicorp/go-hclog"
 	api "github.com/hashicorp/vault/api"
+	"github.com/hashicorp/vault/http"
+	"github.com/hashicorp/vault/vault"
 	"github.com/thalesfsp/configurer/option"
 )
+
+func createTestVault(t *testing.T) (net.Listener, *api.Client) {
+	t.Helper()
+
+	// Create an in-memory, unsealed core (the "backend", if you will).
+	core, keyShares, rootToken := vault.TestCoreUnsealed(t)
+	_ = keyShares
+
+	core.SetLogLevel(hclog.NoLevel)
+	core.Logger().SetLevel(hclog.NoLevel)
+
+	// Start an HTTP server for the core.
+	ln, addr := http.TestServer(t, core)
+
+	// Create a client that talks to the server, initially authenticating with
+	// the root token.
+	conf := api.DefaultConfig()
+	conf.Address = addr
+
+	client, err := api.NewClient(conf)
+	if err != nil {
+		t.Fatal(err)
+	}
+	client.SetToken(rootToken)
+
+	// Setup required secrets, policies, etc.
+	_, err = client.Logical().Write("secret/foo", map[string]interface{}{
+		"secret": "bar",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return ln, client
+}
 
 func TestNew(t *testing.T) {
 	prefix := "TESTING_VAULT_"
@@ -359,11 +398,14 @@ func TestNew(t *testing.T) {
 		// Create a temp, new secret for testing purposes.
 		//////
 
-		// Setup vault, and create a raw client.
-		client, err := api.NewClient(api.DefaultConfig())
-		if err != nil {
-			t.Fatalf("unable to initialize Vault client: %s", err)
-		}
+		ln, client := createTestVault(t)
+		defer ln.Close()
+
+		// // Setup vault, and create a raw client.
+		// client, err := api.NewClient(api.DefaultConfig())
+		// if err != nil {
+		// 	t.Fatalf("unable to initialize Vault client: %s", err)
+		// }
 
 		if tt.credsAPI != nil {
 			if tt.credsAPI.Address != "" {
