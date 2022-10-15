@@ -142,6 +142,10 @@ func NewWithConfig(
 			return nil, customerror.NewFailedToError("read role id", customerror.WithError(err))
 		}
 
+		if resp == nil {
+			return nil, customerror.NewMissingError(fmt.Sprintf("role %s", v.Auth.AppRole), customerror.WithError(err))
+		}
+
 		roleID := resp.Data["role_id"]
 		if roleID == "" {
 			return nil, customerror.NewRequiredError("role id")

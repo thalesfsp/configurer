@@ -3,54 +3,65 @@ package vault
 
 import (
 	"context"
-	"net"
+	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
-	"github.com/hashicorp/go-hclog"
 	api "github.com/hashicorp/vault/api"
-	"github.com/hashicorp/vault/http"
-	"github.com/hashicorp/vault/vault"
 	"github.com/thalesfsp/configurer/option"
 )
 
-func createTestVault(t *testing.T) (net.Listener, *api.Client) {
-	t.Helper()
-
-	// Create an in-memory, unsealed core (the "backend", if you will).
-	core, keyShares, rootToken := vault.TestCoreUnsealed(t)
-	_ = keyShares
-
-	core.SetLogLevel(hclog.NoLevel)
-	core.Logger().SetLevel(hclog.NoLevel)
-
-	// Start an HTTP server for the core.
-	ln, addr := http.TestServer(t, core)
-
-	// Create a client that talks to the server, initially authenticating with
-	// the root token.
-	conf := api.DefaultConfig()
-	conf.Address = addr
-
-	client, err := api.NewClient(conf)
-	if err != nil {
-		t.Fatal(err)
-	}
-	client.SetToken(rootToken)
-
-	// Setup required secrets, policies, etc.
-	_, err = client.Logical().Write("secret/foo", map[string]interface{}{
-		"secret": "bar",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	return ln, client
-}
-
 func TestNew(t *testing.T) {
+	// Should only run if integration tests are enabled.
+	//
+	// NOTE: To run locally, comment the following.
+	if os.Getenv("testing-integration") == "" {
+		t.Skip("skipping integration test")
+	}
+
+	// NOTE: If running locally, you need to set this up.
+	// t.Setenv("VAULT_ADDR", "http://localhost:8200")
+	// t.Setenv("VAULT_TOKEN", "xyz")
+
+	defaultAuth := &Auth{
+		Address: os.Getenv("VAULT_ADDR"),
+		Token:   os.Getenv("VAULT_TOKEN"),
+	}
+
+	appRoleAuth := &Auth{
+		Address: defaultAuth.Address,
+		AppRole: "test",
+		Token:   defaultAuth.Token,
+	}
+
+	defaultSecretInformation := &SecretInformation{
+		MountPath:  "secret",
+		SecretPath: "mysql/webapp",
+	}
+
+	secretValue := map[string]interface{}{
+		"user": "admin",
+		"pass": "@dm|n",
+	}
+
+	wrongSecretValue := map[string]interface{}{
+		"user": "admin",
+		"pass": "123456",
+	}
+
+	defaultCleanUpFunc := func(ctx context.Context, client *api.Client, mountPath, secretPath string) {
+		// Delete secret.
+		_ = client.KVv2(mountPath).Delete(ctx, secretPath)
+
+		// Delete policy.
+		_ = client.Sys().DeletePolicy(appRoleAuth.AppRole)
+
+		// Delete role.
+		_, _ = client.Logical().Delete(fmt.Sprintf("auth/approle/role/%s", appRoleAuth.AppRole))
+	}
+
 	prefix := "TESTING_VAULT_"
 
 	type args struct {
@@ -73,322 +84,114 @@ func TestNew(t *testing.T) {
 		{
 			name: "should load - token",
 			args: args{
-				secretInformation: &SecretInformation{
-					MountPath:  "secret",
-					SecretPath: "test",
-				},
+				authInformation:   defaultAuth,
+				secretInformation: defaultSecretInformation,
 			},
-			credsAPI: &Auth{
-				Address: "http://127.0.0.1:8200",
-				Token:   "root",
-			},
-			secretAPI: &SecretInformation{
-				MountPath:  "secret",
-				SecretPath: "mysql/webapp",
-			},
-			envFunc: func() {
-				os.Unsetenv("VAULT_ADDR")
-				os.Unsetenv("VAULT_TOKEN")
-
-				// Comment if using namespace.
-				os.Unsetenv("VAULT_NAMESPACE")
-
-				// TODO: Uncomment bellow if you want to run the test locally.
-				t.Setenv("VAULT_ADDR", "http://127.0.0.1:8200")
-				t.Setenv("VAULT_TOKEN", "root")
-
-				// Comment if using namespace.
-				t.Setenv("VAULT_NAMESPACE", "")
-			},
+			credsAPI:  defaultAuth,
+			secretAPI: defaultSecretInformation,
+			envFunc:   func() {},
 			opts: []option.KeyFunc{
 				option.WithKeyPrefixer(prefix),
 				option.WithKeyCaser(option.Uppercase),
 			},
-			secretValue: map[string]interface{}{
-				"user": "admin",
-				"pass": "@dm|n",
-			},
-			cleanUp: func(ctx context.Context, client *api.Client, mountPath, secretPath string) {
-				_ = client.KVv2(mountPath).Delete(ctx, secretPath)
-			},
-			wantErr: false,
+			secretValue: secretValue,
+			cleanUp:     defaultCleanUpFunc,
+			wantErr:     false,
 		},
 		{
 			name: "should load - app role",
 			args: args{
-				secretInformation: &SecretInformation{
-					MountPath:  "secret",
-					SecretPath: "mysql/webapp",
-				},
+				authInformation:   appRoleAuth,
+				secretInformation: defaultSecretInformation,
 			},
-			credsAPI: &Auth{
-				Address: "http://127.0.0.1:8200",
-				Token:   "root",
-			},
-			secretAPI: &SecretInformation{
-				MountPath:  "secret",
-				SecretPath: "mysql/webapp",
-			},
-			envFunc: func() {
-				os.Unsetenv("VAULT_ADDR")
-				os.Unsetenv("VAULT_APP_ROLE")
-				os.Unsetenv("VAULT_TOKEN")
-
-				// Comment if using namespace.
-				os.Unsetenv("VAULT_NAMESPACE")
-
-				// TODO: Uncomment bellow if you want to run the test locally.
-				t.Setenv("VAULT_ADDR", "http://127.0.0.1:8200")
-				t.Setenv("VAULT_APP_ROLE", "jenkins")
-				t.Setenv("VAULT_TOKEN", "root")
-
-				// Comment if using namespace.
-				t.Setenv("VAULT_NAMESPACE", "")
-			},
+			credsAPI:  appRoleAuth,
+			secretAPI: defaultSecretInformation,
+			envFunc:   func() {},
 			opts: []option.KeyFunc{
 				option.WithKeyPrefixer(prefix),
 				option.WithKeyCaser(option.Uppercase),
 			},
-			secretValue: map[string]interface{}{
-				"user": "admin",
-				"pass": "@dm|n",
-			},
-			cleanUp: func(ctx context.Context, client *api.Client, mountPath, secretPath string) {
-				_ = client.KVv2(mountPath).Delete(ctx, secretPath)
-			},
-			wantErr: false,
-		},
-		{
-			name: "should load - pass auth information",
-			args: args{
-				authInformation: &Auth{
-					Address:   "http://127.0.0.1:8200",
-					AppRole:   "jenkins",
-					Namespace: "",
-					Token:     "root",
-				},
-				secretInformation: &SecretInformation{
-					MountPath:  "secret",
-					SecretPath: "mysql/webapp",
-				},
-			},
-			credsAPI: &Auth{
-				Address: "http://127.0.0.1:8200",
-				Token:   "root",
-			},
-			secretAPI: &SecretInformation{
-				MountPath:  "secret",
-				SecretPath: "mysql/webapp",
-			},
-			envFunc: func() {
-				os.Unsetenv("VAULT_ADDR")
-				os.Unsetenv("VAULT_APP_ROLE")
-				os.Unsetenv("VAULT_TOKEN")
-
-				// Comment if using namespace.
-				os.Unsetenv("VAULT_NAMESPACE")
-
-				t.Setenv("VAULT_ADDR", "http://127.0.0.1:8200")
-				t.Setenv("VAULT_APP_ROLE", "jenkins")
-				t.Setenv("VAULT_TOKEN", "root")
-			},
-			opts: []option.KeyFunc{
-				option.WithKeyPrefixer(prefix),
-				option.WithKeyCaser(option.Uppercase),
-			},
-			secretValue: map[string]interface{}{
-				"user": "admin",
-				"pass": "@dm|n",
-			},
-			cleanUp: func(ctx context.Context, client *api.Client, mountPath, secretPath string) {
-				_ = client.KVv2(mountPath).Delete(ctx, secretPath)
-			},
-			wantErr: false,
+			secretValue: secretValue,
+			cleanUp:     defaultCleanUpFunc,
+			wantErr:     false,
 		},
 		{
 			name: "should load - should not override exported secret",
 			args: args{
-				override: false,
-				authInformation: &Auth{
-					Address:   "http://127.0.0.1:8200",
-					AppRole:   "jenkins",
-					Namespace: "",
-					Token:     "root",
-				},
-				secretInformation: &SecretInformation{
-					MountPath:  "secret",
-					SecretPath: "mysql/webapp",
-				},
+				override:          false,
+				authInformation:   defaultAuth,
+				secretInformation: defaultSecretInformation,
 			},
-			credsAPI: &Auth{
-				Address: "http://127.0.0.1:8200",
-				Token:   "root",
-			},
-			secretAPI: &SecretInformation{
-				MountPath:  "secret",
-				SecretPath: "mysql/webapp",
-			},
+			credsAPI:  defaultAuth,
+			secretAPI: defaultSecretInformation,
 			envFunc: func() {
-				os.Unsetenv("VAULT_ADDR")
-				os.Unsetenv("VAULT_APP_ROLE")
-				os.Unsetenv("VAULT_TOKEN")
-
-				// Comment if using namespace.
-				os.Unsetenv("VAULT_NAMESPACE")
-
-				t.Setenv("VAULT_ADDR", "http://127.0.0.1:8200")
-				t.Setenv("VAULT_APP_ROLE", "jenkins")
-				t.Setenv("VAULT_TOKEN", "root")
-
 				t.Setenv("TESTING_VAULT_PASS", "123456")
 			},
 			opts: []option.KeyFunc{
 				option.WithKeyPrefixer(prefix),
 				option.WithKeyCaser(option.Uppercase),
 			},
-			secretValue: map[string]interface{}{
-				"user": "admin",
-				"pass": "@dm|n",
-			},
-			expectedValue: map[string]interface{}{
-				"user": "admin",
-				"pass": "123456",
-			},
-			cleanUp: func(ctx context.Context, client *api.Client, mountPath, secretPath string) {
-				_ = client.KVv2(mountPath).Delete(ctx, secretPath)
-			},
-			wantErr: false,
+			secretValue:   secretValue,
+			expectedValue: wrongSecretValue,
+			cleanUp:       defaultCleanUpFunc,
+			wantErr:       false,
 		},
 		{
 			name: "should load - should override exported secret",
 			args: args{
-				override: true,
-				authInformation: &Auth{
-					Address:   "http://127.0.0.1:8200",
-					AppRole:   "jenkins",
-					Namespace: "",
-					Token:     "root",
-				},
-				secretInformation: &SecretInformation{
-					MountPath:  "secret",
-					SecretPath: "mysql/webapp",
-				},
+				override:          true,
+				authInformation:   defaultAuth,
+				secretInformation: defaultSecretInformation,
 			},
-			credsAPI: &Auth{
-				Address: "http://127.0.0.1:8200",
-				Token:   "root",
-			},
-			secretAPI: &SecretInformation{
-				MountPath:  "secret",
-				SecretPath: "mysql/webapp",
-			},
+			credsAPI:  defaultAuth,
+			secretAPI: defaultSecretInformation,
 			envFunc: func() {
-				os.Unsetenv("VAULT_ADDR")
-				os.Unsetenv("VAULT_APP_ROLE")
-				os.Unsetenv("VAULT_TOKEN")
-
-				// Comment if using namespace.
-				os.Unsetenv("VAULT_NAMESPACE")
-
-				t.Setenv("VAULT_ADDR", "http://127.0.0.1:8200")
-				t.Setenv("VAULT_APP_ROLE", "jenkins")
-				t.Setenv("VAULT_TOKEN", "root")
-
 				t.Setenv("TESTING_VAULT_PASS", "123456")
 			},
 			opts: []option.KeyFunc{
 				option.WithKeyPrefixer(prefix),
 				option.WithKeyCaser(option.Uppercase),
 			},
-			secretValue: map[string]interface{}{
-				"user": "admin",
-				"pass": "@dm|n",
-			},
-			expectedValue: map[string]interface{}{
-				"user": "admin",
-				"pass": "@dm|n",
-			},
-			cleanUp: func(ctx context.Context, client *api.Client, mountPath, secretPath string) {
-				_ = client.KVv2(mountPath).Delete(ctx, secretPath)
-			},
-			wantErr: false,
+			secretValue: secretValue,
+			cleanUp:     defaultCleanUpFunc,
+			wantErr:     false,
 		},
 		{
 			name: "should load - missing auth information",
 			args: args{
-				authInformation: nil,
-				secretInformation: &SecretInformation{
-					MountPath:  "secret",
-					SecretPath: "mysql/webapp",
-				},
+				authInformation:   nil,
+				secretInformation: defaultSecretInformation,
 			},
-			credsAPI: &Auth{
-				Address: "http://127.0.0.1:8200",
-				Token:   "root",
-			},
-			secretAPI: &SecretInformation{
-				MountPath:  "secret",
-				SecretPath: "mysql/webapp",
-			},
+			credsAPI:  defaultAuth,
+			secretAPI: defaultSecretInformation,
 			envFunc: func() {
-				os.Unsetenv("VAULT_ADDR")
-				os.Unsetenv("VAULT_APP_ROLE")
 				os.Unsetenv("VAULT_TOKEN")
-
-				// Comment if using namespace.
-				os.Unsetenv("VAULT_NAMESPACE")
+				os.Unsetenv("VAULT_ADDR")
 			},
 			opts: []option.KeyFunc{
 				option.WithKeyPrefixer(prefix),
 				option.WithKeyCaser(option.Uppercase),
 			},
-			secretValue: map[string]interface{}{
-				"user": "admin",
-				"pass": "@dm|n",
-			},
-			cleanUp: func(ctx context.Context, client *api.Client, mountPath, secretPath string) {
-				_ = client.KVv2(mountPath).Delete(ctx, secretPath)
-			},
-			wantErr: true,
+			secretValue: secretValue,
+			cleanUp:     defaultCleanUpFunc,
+			wantErr:     true,
 		},
 		{
 			name: "should load - missing secret information",
 			args: args{
-				authInformation:   nil,
-				secretInformation: &SecretInformation{},
+				authInformation:   defaultAuth,
+				secretInformation: nil,
 			},
-			credsAPI: &Auth{
-				Address: "http://127.0.0.1:8200",
-				Token:   "root",
-			},
-			secretAPI: &SecretInformation{
-				MountPath:  "secret",
-				SecretPath: "mysql/webapp",
-			},
-			envFunc: func() {
-				os.Unsetenv("VAULT_ADDR")
-				os.Unsetenv("VAULT_APP_ROLE")
-				os.Unsetenv("VAULT_TOKEN")
-
-				// Comment if using namespace.
-				os.Unsetenv("VAULT_NAMESPACE")
-
-				t.Setenv("VAULT_ADDR", "http://127.0.0.1:8200")
-				t.Setenv("VAULT_APP_ROLE", "jenkins")
-				t.Setenv("VAULT_TOKEN", "root")
-			},
+			credsAPI:  defaultAuth,
+			secretAPI: defaultSecretInformation,
+			envFunc:   func() {},
 			opts: []option.KeyFunc{
 				option.WithKeyPrefixer(prefix),
 				option.WithKeyCaser(option.Uppercase),
 			},
-			secretValue: map[string]interface{}{
-				"user": "admin",
-				"pass": "@dm|n",
-			},
-			cleanUp: func(ctx context.Context, client *api.Client, mountPath, secretPath string) {
-				_ = client.KVv2(mountPath).Delete(ctx, secretPath)
-			},
-			wantErr: true,
+			secretValue: secretValue,
+			cleanUp:     defaultCleanUpFunc,
+			wantErr:     true,
 		},
 	}
 	for _, tt := range tests {
@@ -398,32 +201,24 @@ func TestNew(t *testing.T) {
 		// Create a temp, new secret for testing purposes.
 		//////
 
-		ln, client := createTestVault(t)
-		defer ln.Close()
-
-		// // Setup vault, and create a raw client.
-		// client, err := api.NewClient(api.DefaultConfig())
-		// if err != nil {
-		// 	t.Fatalf("unable to initialize Vault client: %s", err)
-		// }
-
-		if tt.credsAPI != nil {
-			if tt.credsAPI.Address != "" {
-				if err := client.SetAddress(tt.credsAPI.Address); err != nil {
-					t.Fatalf("unable to set Vault address: %s", err)
-				}
-			}
-
-			if tt.credsAPI.Token != "" {
-				client.SetToken(tt.credsAPI.Token)
-			}
+		// Setup vault, and create a raw client.
+		client, err := api.NewClient(api.DefaultConfig())
+		if err != nil {
+			t.Fatalf("unable to initialize Vault client: %s", err)
 		}
+
+		if err := client.SetAddress(tt.credsAPI.Address); err != nil {
+			t.Fatalf("unable to set Vault address: %s", err)
+		}
+
+		client.SetToken(tt.credsAPI.Token)
 
 		//////
 		// Ensure cleanup.
 		//////
+
 		defer func() {
-			ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 			defer cancel()
 
 			tt.cleanUp(
@@ -434,7 +229,37 @@ func TestNew(t *testing.T) {
 			)
 		}()
 
-		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		// Enable AppRole.
+		if err := client.Sys().EnableAuthWithOptions("approle", &api.EnableAuthOptions{
+			Type: "approle",
+		}); err != nil {
+			if !strings.Contains(err.Error(), "already") {
+				t.Fatalf("unable to enable AppRole: %s", err)
+			}
+		}
+
+		// Create a policy.
+		if err := client.Sys().PutPolicy(appRoleAuth.AppRole, `path "secret/data/mysql/webapp" {
+			capabilities = ["read"]
+		}`); err != nil {
+			t.Fatalf("unable to create policy: %s", err)
+		}
+
+		// Create a new role.
+		_, err = client.Logical().Write(
+			fmt.Sprintf("auth/approle/role/%s", appRoleAuth.AppRole),
+			map[string]interface{}{
+				"token_policies": appRoleAuth.AppRole,
+				"bind_secret_id": true,
+				"secret_id_ttl":  "1m",
+				"token_ttl":      "1m",
+				"token_max_ttl":  "2m",
+			})
+		if err != nil {
+			t.Fatalf("unable to create role: %s", err)
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 
 		if _, err := client.
