@@ -64,6 +64,11 @@ func TestNew(t *testing.T) {
 
 	prefix := "TESTING_VAULT_"
 
+	defaultOptions := []option.KeyFunc{
+		option.WithKeyPrefixer(prefix),
+		option.WithKeyCaser(option.Uppercase),
+	}
+
 	type args struct {
 		override          bool
 		authInformation   *Auth
@@ -87,13 +92,10 @@ func TestNew(t *testing.T) {
 				authInformation:   defaultAuth,
 				secretInformation: defaultSecretInformation,
 			},
-			credsAPI:  defaultAuth,
-			secretAPI: defaultSecretInformation,
-			envFunc:   func() {},
-			opts: []option.KeyFunc{
-				option.WithKeyPrefixer(prefix),
-				option.WithKeyCaser(option.Uppercase),
-			},
+			credsAPI:    defaultAuth,
+			secretAPI:   defaultSecretInformation,
+			envFunc:     func() {},
+			opts:        defaultOptions,
 			secretValue: secretValue,
 			cleanUp:     defaultCleanUpFunc,
 			wantErr:     false,
@@ -104,13 +106,10 @@ func TestNew(t *testing.T) {
 				authInformation:   appRoleAuth,
 				secretInformation: defaultSecretInformation,
 			},
-			credsAPI:  appRoleAuth,
-			secretAPI: defaultSecretInformation,
-			envFunc:   func() {},
-			opts: []option.KeyFunc{
-				option.WithKeyPrefixer(prefix),
-				option.WithKeyCaser(option.Uppercase),
-			},
+			credsAPI:    appRoleAuth,
+			secretAPI:   defaultSecretInformation,
+			envFunc:     func() {},
+			opts:        defaultOptions,
 			secretValue: secretValue,
 			cleanUp:     defaultCleanUpFunc,
 			wantErr:     false,
@@ -127,10 +126,7 @@ func TestNew(t *testing.T) {
 			envFunc: func() {
 				t.Setenv("TESTING_VAULT_PASS", "123456")
 			},
-			opts: []option.KeyFunc{
-				option.WithKeyPrefixer(prefix),
-				option.WithKeyCaser(option.Uppercase),
-			},
+			opts:          defaultOptions,
 			secretValue:   secretValue,
 			expectedValue: wrongSecretValue,
 			cleanUp:       defaultCleanUpFunc,
@@ -148,10 +144,7 @@ func TestNew(t *testing.T) {
 			envFunc: func() {
 				t.Setenv("TESTING_VAULT_PASS", "123456")
 			},
-			opts: []option.KeyFunc{
-				option.WithKeyPrefixer(prefix),
-				option.WithKeyCaser(option.Uppercase),
-			},
+			opts:        defaultOptions,
 			secretValue: secretValue,
 			cleanUp:     defaultCleanUpFunc,
 			wantErr:     false,
@@ -168,10 +161,7 @@ func TestNew(t *testing.T) {
 				os.Unsetenv("VAULT_TOKEN")
 				os.Unsetenv("VAULT_ADDR")
 			},
-			opts: []option.KeyFunc{
-				option.WithKeyPrefixer(prefix),
-				option.WithKeyCaser(option.Uppercase),
-			},
+			opts:        defaultOptions,
 			secretValue: secretValue,
 			cleanUp:     defaultCleanUpFunc,
 			wantErr:     true,
@@ -182,13 +172,10 @@ func TestNew(t *testing.T) {
 				authInformation:   defaultAuth,
 				secretInformation: nil,
 			},
-			credsAPI:  defaultAuth,
-			secretAPI: defaultSecretInformation,
-			envFunc:   func() {},
-			opts: []option.KeyFunc{
-				option.WithKeyPrefixer(prefix),
-				option.WithKeyCaser(option.Uppercase),
-			},
+			credsAPI:    defaultAuth,
+			secretAPI:   defaultSecretInformation,
+			envFunc:     func() {},
+			opts:        defaultOptions,
 			secretValue: secretValue,
 			cleanUp:     defaultCleanUpFunc,
 			wantErr:     true,
