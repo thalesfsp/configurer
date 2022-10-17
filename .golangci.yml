@@ -43,6 +43,7 @@ issues:
         - gomnd
         - forbidigo
         - errcheck
+        - lll
 
     - path: example_test.go
       linters:

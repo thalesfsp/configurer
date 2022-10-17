@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Roadmap
 
-To be defined.
+- Backup strategy. When one provider fail, fallback to another.
 
 ## [1.0.0] - 2022-XX-YY
 ### Added

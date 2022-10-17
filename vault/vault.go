@@ -4,7 +4,6 @@ package vault
 import (
 	"context"
 	"fmt"
-	"os"
 
 	vault "github.com/hashicorp/vault/api"
 	"github.com/thalesfsp/configurer/internal/validation"
@@ -71,35 +70,6 @@ func NewWithConfig(
 	secretInformation *SecretInformation,
 	config Config,
 ) (provider.IProvider, error) {
-	authFromEnv := &Auth{
-		Address:   os.Getenv("VAULT_ADDR"),
-		AppRole:   os.Getenv("VAULT_APP_ROLE"),
-		Namespace: os.Getenv("VAULT_NAMESPACE"),
-		Token:     os.Getenv("VAULT_TOKEN"),
-	}
-
-	// Should use environment variables if no auth information is provided.
-	if authInformation == nil {
-		authInformation = authFromEnv
-	} else {
-		// Environment variables should take precedence over auth information.
-		if authFromEnv.Address != "" {
-			authInformation.Address = authFromEnv.Address
-		}
-
-		if authFromEnv.AppRole != "" {
-			authInformation.AppRole = authFromEnv.AppRole
-		}
-
-		if authFromEnv.Namespace != "" {
-			authInformation.Namespace = authFromEnv.Namespace
-		}
-
-		if authFromEnv.Token != "" {
-			authInformation.Token = authFromEnv.Token
-		}
-	}
-
 	provider, err := provider.New("vault", override)
 	if err != nil {
 		return nil, err

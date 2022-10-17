@@ -98,19 +98,13 @@ Go's flags.`,
 func init() {
 	loadCmd.AddCommand(vaultCmd)
 
-	vaultCmd.PersistentFlags().StringP("address", "a", "", "Address of the Vault server")
-	vaultCmd.PersistentFlags().StringP("app-role", "r", "", "AppRole to use for authentication")
-	vaultCmd.PersistentFlags().StringP("namespace", "n", "", "Vault namespace to use for authentication")
-	vaultCmd.PersistentFlags().StringP("token", "t", "", "Token to use for authentication")
+	vaultCmd.Flags().StringP("address", "a", os.Getenv("VAULT_ADDR"), "Address of the Vault server")
+	vaultCmd.Flags().StringP("app-role", "r", os.Getenv("VAULT_APP_ROLE"), "AppRole to use for authentication")
+	vaultCmd.Flags().StringP("namespace", "n", os.Getenv("VAULT_NAMESPACE"), "Vault namespace to use for authentication")
+	vaultCmd.Flags().StringP("token", "t", os.Getenv("VAULT_TOKEN"), "Token to use for authentication")
 
-	vaultCmd.MarkPersistentFlagRequired("address")
-	vaultCmd.MarkPersistentFlagRequired("token")
-
-	vaultCmd.PersistentFlags().StringP("mount-path", "m", "", "Mount path of the secret")
-	vaultCmd.PersistentFlags().StringP("secret-path", "p", "", "Path of the secret")
-
-	vaultCmd.MarkPersistentFlagRequired("mount-path")
-	vaultCmd.MarkPersistentFlagRequired("secret-path")
+	vaultCmd.Flags().StringP("mount-path", "m", "", "Mount path of the secret")
+	vaultCmd.Flags().StringP("secret-path", "p", "", "Path of the secret")
 
 	vaultCmd.SetUsageTemplate(`Usage:{{if .Runnable}}
   {{.UseLine}} -- [command to run] [command args]{{end}}{{if .HasAvailableSubCommands}}
