@@ -4,15 +4,27 @@
 
 ## Install
 
+### CLI
+
+Install using go install:
+
+`$ curl -s https://raw.githubusercontent.com/thalesfsp/configurer/main/resources/install.sh | sh`
+
+### Programatically
+
+Install dependency:
+
 `$ go get github.com/thalesfsp/configurer`
-
-### Specific version
-
-Example: `$ go get github.com/thalesfsp/configurer@v1.2.3`
 
 ## Usage
 
-See [`example_test.go`](example_test.go), and [`configurer_test.go`](configurer_test.go) file.
+### CLI
+
+See the `example` section by running `configurer l v --help` 
+
+### Programatically
+
+See [`dotenv/example_test.go`](dotenv/example_test.go)
 
 ### Documentation
 
@@ -26,7 +38,7 @@ Check out [CONTRIBUTION](CONTRIBUTION.md).
 
 1. Update [CHANGELOG](CHANGELOG.md) accordingly.
 2. Once changes from MR are merged.
-3. Tag and release.
+3. Tag. Don't need to create release, it's automatically created by CI.
 
 ## Roadmap
 
