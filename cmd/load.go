@@ -1,8 +1,12 @@
 package cmd
 
 import (
+	"time"
+
 	"github.com/spf13/cobra"
 )
+
+var shutdownTimeout time.Duration
 
 // loadCmd represents the run command.
 var loadCmd = &cobra.Command{
@@ -14,7 +18,19 @@ var loadCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(loadCmd)
 
-	loadCmd.PersistentFlags().Bool("override", false, "Override the env var with loaded ones")
+	loadCmd.PersistentFlags().Bool(
+		"override",
+		false,
+		"Override the env var with loaded ones",
+	)
+
+	loadCmd.PersistentFlags().DurationVarP(
+		&shutdownTimeout,
+		"shutdown-timeout",
+		"s",
+		30*time.Second,
+		"The timeout to wait for the command to shutdown",
+	)
 
 	loadCmd.SetUsageTemplate(`Usage:{{if .Runnable}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"log"
 	"os"
-	"os/exec"
 
 	"github.com/spf13/cobra"
 	"github.com/thalesfsp/configurer/vault"
@@ -46,19 +45,7 @@ It's required to distinguish between the flags passed to Go and those
 that aren't. Everything after the double dash won't be considered to be
 Go's flags.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		var (
-			command   string
-			arguments []string
-		)
-
-		for i := 0; i < len(args); i++ {
-			// If the first argument is the command, set command, else set arguments.
-			if i == 0 {
-				command = args[i]
-			} else {
-				arguments = append(arguments, args[i])
-			}
-		}
+		command, arguments := splitCmdFromArgs(args)
 
 		auth := &vault.Auth{
 			Address:   cmd.Flag("address").Value.String(),
@@ -72,26 +59,19 @@ Go's flags.`,
 			SecretPath: cmd.Flag("secret-path").Value.String(),
 		}
 
+		// Should be able to override current environment variables.
 		shouldOverride := cmd.Flag("override").Value.String() == "true"
 
-		vProvider, err := vault.New(shouldOverride, auth, sI)
+		vaultProvider, err := vault.New(shouldOverride, auth, sI)
 		if err != nil {
 			log.Fatalln(err)
 		}
 
-		if err := vProvider.Load(context.Background()); err != nil {
+		if err := vaultProvider.Load(context.Background()); err != nil {
 			log.Fatalln(err)
 		}
 
-		// Should be able to call a command with the loaded secrets.
-		c := exec.Command(command, arguments...)
-		c.Stdout = os.Stdout
-		c.Stderr = os.Stderr
-		c.Stdin = os.Stdin
-
-		if err := c.Run(); err != nil {
-			log.Fatalln(err)
-		}
+		runCommand(vaultProvider, command, arguments)
 	},
 }
 

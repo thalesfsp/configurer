@@ -39,8 +39,7 @@ func (l *Logger) Child(name string) *Logger {
 // - StdOut
 // - StdErr - In case of ERROR level
 //
-// NOTE: Use `SYPL_DEBUG` env var to overwrite the max level.
-// SEE: https://github.com/thalesfsp/sypl/blob/master/CHANGELOG.md#154---2021-10-13
+// NOTE: Use `SYPL_LEVEL` env var to overwrite the max level.
 func Get() *Logger {
 	if singletonLogger == nil {
 		singletonLogger = &Logger{

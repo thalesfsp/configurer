@@ -3,8 +3,6 @@ package cmd
 import (
 	"context"
 	"log"
-	"os"
-	"os/exec"
 
 	"github.com/spf13/cobra"
 	"github.com/thalesfsp/configurer/dotenv"
@@ -36,40 +34,21 @@ It's required to distinguish between the flags passed to Go and those
 that aren't. Everything after the double dash won't be considered to be
 Go's flags.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		var (
-			command   string
-			arguments []string
-		)
+		command, arguments := splitCmdFromArgs(args)
 
-		for i := 0; i < len(args); i++ {
-			// If the first argument is the command, set command, else set arguments.
-			if i == 0 {
-				command = args[i]
-			} else {
-				arguments = append(arguments, args[i])
-			}
-		}
-
+		// Should be able to override current environment variables.
 		shouldOverride := cmd.Flag("override").Value.String() == "true"
 
-		vProvider, err := dotenv.New(shouldOverride, dotEnvFiles...)
+		dotEnvProvider, err := dotenv.New(shouldOverride, dotEnvFiles...)
 		if err != nil {
 			log.Fatalln(err)
 		}
 
-		if err := vProvider.Load(context.Background()); err != nil {
+		if err := dotEnvProvider.Load(context.Background()); err != nil {
 			log.Fatalln(err)
 		}
 
-		// Should be able to call a command with the loaded secrets.
-		c := exec.Command(command, arguments...)
-		c.Stdout = os.Stdout
-		c.Stderr = os.Stderr
-		c.Stdin = os.Stdin
-
-		if err := c.Run(); err != nil {
-			log.Fatalln(err)
-		}
+		runCommand(dotEnvProvider, command, arguments)
 	},
 }
 

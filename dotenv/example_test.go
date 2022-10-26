@@ -24,7 +24,7 @@ func ExampleNew() {
 	}
 
 	// We can check it here.
-	fmt.Println("TEST_KEY:", os.Getenv("TEST_KEY"))
+	fmt.Println(os.Getenv("TEST_KEY"))
 
 	// Additionally, we can use the config into a struct.
 	type Config struct {
@@ -48,7 +48,7 @@ func ExampleNew() {
 	fmt.Println(c2.TestKey)
 
 	// Output:
-	// TEST_KEY: TEST_VALUE
+	// TEST_VALUE
 	// TEST_VALUE
 	// TEST_VALUE
 }
