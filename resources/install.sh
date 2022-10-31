@@ -131,7 +131,11 @@ info "Architecture: ${UNDERLINE}${BLUE}$arch${NO_COLOR}"
 info "OS: ${UNDERLINE}${BLUE}$os${NO_COLOR}"
 info "Temporary Filepath: ${UNDERLINE}${BLUE}$tmp_dir/$APP_NAME.tar.gz${NO_COLOR}"
 info "Tarball URL: ${UNDERLINE}${BLUE}${final_url}${NO_COLOR}"
-confirm "Install $APP_NAME ${GREEN}latest ($version)${NO_COLOR} version to ${BOLD}${GREEN}${BIN_DIR}${NO_COLOR}?"
+
+# Don't ask for confirmation if non-interactive.
+if [ -t 0 ]; then
+  confirm "Install $APP_NAME ${GREEN}latest ($version)${NO_COLOR} version to ${BOLD}${GREEN}${BIN_DIR}${NO_COLOR}?"
+fi
 
 # Download the latest release using fetcher
 info "Downloading $final_url"
