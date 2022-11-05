@@ -28,7 +28,7 @@ func ExampleNew() {
 
 	// Additionally, we can use the config into a struct.
 	type Config struct {
-		TestKey string `json:"TEST_KEY"`
+		TestKey string `json:"testKey" env:"TEST_KEY"`
 	}
 
 	// ExportToStruct can be called from the provider...
@@ -39,7 +39,7 @@ func ExampleNew() {
 
 	// or from the `util` package.
 	var c2 Config
-	if err := util.ExportToStruct(&c2); err != nil {
+	if err := util.Dump(&c2); err != nil {
 		log.Fatalln(err)
 	}
 

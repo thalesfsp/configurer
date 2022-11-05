@@ -50,7 +50,7 @@ func (p *Provider) GetOverride() bool {
 
 // ExportToStruct exports the loaded configuration to the given struct.
 func (p *Provider) ExportToStruct(v any) error {
-	return util.ExportToStruct(v)
+	return util.Dump(v)
 }
 
 // New creates a new provider.
