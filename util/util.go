@@ -14,11 +14,11 @@ import (
 // Helpers.
 //////
 
-// setDefault For a given struct `v`, set default values based on the struct
+// SetDefault For a given struct `v`, set default values based on the struct
 // field tags (`default`).
 //
 // NOTE: It only sets default values for fields that are not set.
-func setDefault(v any) error {
+func SetDefault(v any) error {
 	tagName := "default"
 
 	if v == nil {
@@ -44,7 +44,7 @@ func setDefault(v any) error {
 		if fieldKind == reflect.Ptr && field.Elem().Kind() == reflect.Struct {
 			if field.CanInterface() {
 				// Recurse using an interface of the field.
-				err := setDefault(field.Interface())
+				err := SetDefault(field.Interface())
 				if err != nil {
 					return err
 				}
@@ -58,7 +58,7 @@ func setDefault(v any) error {
 		if fieldKind == reflect.Struct {
 			if field.CanAddr() && field.Addr().CanInterface() {
 				// Recurse using an interface of the pointer value of the field.
-				err := setDefault(field.Addr().Interface())
+				err := SetDefault(field.Addr().Interface())
 				if err != nil {
 					return err
 				}
@@ -176,11 +176,11 @@ func setDefault(v any) error {
 	return nil
 }
 
-// setEnv For a given struct `v`, set values based on the struct
+// SetEnv For a given struct `v`, set values based on the struct
 // field tags (`env`) and the environment variables.
 //
 // NOTE: It will set the value of the field even if it's not empty.
-func setEnv(v any) error {
+func SetEnv(v any) error {
 	tagName := "env"
 
 	if v == nil {
@@ -206,7 +206,7 @@ func setEnv(v any) error {
 		if fieldKind == reflect.Ptr && field.Elem().Kind() == reflect.Struct {
 			if field.CanInterface() {
 				// Recurse using an interface of the field.
-				err := setDefault(field.Interface())
+				err := SetDefault(field.Interface())
 				if err != nil {
 					return err
 				}
@@ -220,7 +220,7 @@ func setEnv(v any) error {
 		if fieldKind == reflect.Struct {
 			if field.CanAddr() && field.Addr().CanInterface() {
 				// Recurse using an interface of the pointer value of the field.
-				err := setDefault(field.Addr().Interface())
+				err := SetDefault(field.Addr().Interface())
 				if err != nil {
 					return err
 				}
@@ -354,11 +354,11 @@ func setEnv(v any) error {
 // NOTE: It only sets default values for fields that are not set.
 // NOTE: It'll set the value from env vars even if it's not empty (precedence).
 func Dump(v any) error {
-	if err := setDefault(v); err != nil {
+	if err := SetDefault(v); err != nil {
 		return err
 	}
 
-	if err := setEnv(v); err != nil {
+	if err := SetEnv(v); err != nil {
 		return err
 	}
 

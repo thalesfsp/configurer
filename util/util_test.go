@@ -178,7 +178,7 @@ func TestSetDefaults(t *testing.T) {
 		T16: 0,     // Should not replace
 	}
 
-	if err := setDefault(&r); err != nil {
+	if err := SetDefault(&r); err != nil {
 		t.Fatal(err)
 	}
 
@@ -277,7 +277,7 @@ func TestSetDefaults_omitempty(t *testing.T) {
 		T16: 0,     // Should not replace
 	}
 
-	if err := setDefault(&r); err != nil {
+	if err := SetDefault(&r); err != nil {
 		t.Fatal(err)
 	}
 
@@ -356,7 +356,7 @@ func TestSetEnv(t *testing.T) {
 	}
 
 	var r TestData
-	if err := setEnv(&r); err != nil {
+	if err := SetEnv(&r); err != nil {
 		t.Fatal(err)
 	}
 
