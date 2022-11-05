@@ -5,11 +5,11 @@ import (
 	"testing"
 )
 
-func TestExportToStruct(t *testing.T) {
-	t.Setenv("TestExportToStruct_T1", "text1")
-	t.Setenv("TestExportToStruct_T2", "false")
-	t.Setenv("TestExportToStruct_T3", "1.13")
-	t.Setenv("TestExportToStruct_T4", "123")
+func TestDump(t *testing.T) {
+	t.Setenv("TestDump_T1", "text1")
+	t.Setenv("TestDump_T2", "false")
+	t.Setenv("TestDump_T3", "1.13")
+	t.Setenv("TestDump_T4", "123")
 
 	type TestData4 struct {
 		T8 int `json:"T8" default:"1"`
@@ -29,10 +29,10 @@ func TestExportToStruct(t *testing.T) {
 	}
 
 	type TestData1 struct {
-		T1 string  `json:"T1" default:"text1" env:"TestExportToStruct_T1"`
-		T2 bool    `json:"T2" default:"true" env:"TestExportToStruct_T2"`
-		T3 float64 `json:"T3" default:"0.64" env:"TestExportToStruct_T3"`
-		T4 int     `json:"T4" default:"1" env:"TestExportToStruct_T4"`
+		T1 string  `json:"T1" default:"text1" env:"TestDump_T1"`
+		T2 bool    `json:"T2" default:"true" env:"TestDump_T2"`
+		T3 float64 `json:"T3" default:"0.64" env:"TestDump_T3"`
+		T4 int     `json:"T4" default:"1" env:"TestDump_T4"`
 
 		*TestData2
 	}
@@ -87,11 +87,11 @@ func TestExportToStruct(t *testing.T) {
 	}
 }
 
-func TestExportToStruct_validation(t *testing.T) {
-	t.Setenv("TestExportToStruct_validation_T1", "text1")
-	t.Setenv("TestExportToStruct_validation_T2", "false")
-	t.Setenv("TestExportToStruct_validation_T3", "1.13")
-	t.Setenv("TestExportToStruct_validation_T4", "123")
+func TestDump_validation(t *testing.T) {
+	t.Setenv("TestDump_validation_T1", "text1")
+	t.Setenv("TestDump_validation_T2", "false")
+	t.Setenv("TestDump_validation_T3", "1.13")
+	t.Setenv("TestDump_validation_T4", "123")
 
 	type TestData2 struct {
 		T5 string `json:"T5" default:"text2" validate:"gte=10"`
@@ -99,10 +99,10 @@ func TestExportToStruct_validation(t *testing.T) {
 	}
 
 	type TestData1 struct {
-		T1 string  `json:"T1" default:"text1" env:"TestExportToStruct_validation_T1"`
-		T2 bool    `json:"T2" default:"true" env:"TestExportToStruct_validation_T2"`
-		T3 float64 `json:"T3" default:"0.64" env:"TestExportToStruct_validation_T3" validate:"gte=2"`
-		T4 int     `json:"T4" default:"1" env:"TestExportToStruct_validation_T4"`
+		T1 string  `json:"T1" default:"text1" env:"TestDump_validation_T1"`
+		T2 bool    `json:"T2" default:"true" env:"TestDump_validation_T2"`
+		T3 float64 `json:"T3" default:"0.64" env:"TestDump_validation_T3" validate:"gte=2"`
+		T4 int     `json:"T4" default:"1" env:"TestDump_validation_T4"`
 
 		*TestData2
 	}
