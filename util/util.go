@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"strconv"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/thalesfsp/configurer/internal/validation"
 	"github.com/thalesfsp/customerror"
 )
@@ -334,6 +335,12 @@ func SetEnv(v any) error {
 	}
 
 	return nil
+}
+
+// GetValidator returns the validator instance. Use that, for example, to add
+// custom validators.
+func GetValidator() *validator.Validate {
+	return validation.Get()
 }
 
 //////

@@ -9,15 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Backup strategy. When one provider fail, fallback to another.
 
+## [1.1.3] - 2022-11-10
+### Added
+- GetValidator returns the validator instance. Use that, for example, to add custom validators.
+
 ## [1.1.2] - 2022-11-04
 ### Changed
 - Exposes `SetDefault` and `SetEnv`.
 
-
 ## [1.1.1] - 2022-11-04
 ### Changed
 - Fixed test names.
-
 
 ## [1.1.0] - 2022-11-04
 ### Added
