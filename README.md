@@ -1,6 +1,6 @@
 # configurer
 
-`configurer` loads secret into env vars from different providers.
+`configurer` loads secret into env vars from different providers. Run `configurer l -h` to see the list of available providers.
 
 ## Install
 
