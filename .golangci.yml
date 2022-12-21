@@ -44,6 +44,8 @@ issues:
         - forbidigo
         - errcheck
         - lll
+        - goconst
+        - gomnd
 
     - path: example_test.go
       linters:

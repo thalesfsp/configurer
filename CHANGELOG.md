@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Backup strategy. When one provider fail, fallback to another.
 
+## [1.1.5] - 2022-12-20
+### Added
+- NoOp provider.
+
 ## [1.1.3] - 2022-11-10
 ### Added
 - GetValidator returns the validator instance. Use that, for example, to add custom validators.
