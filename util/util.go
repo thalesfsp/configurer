@@ -390,7 +390,9 @@ func DumpToEnv(filename string, content map[string]string) error {
 	}
 
 	// Flush the file.
-	file.Sync()
+	if err := file.Sync(); err != nil {
+		return customerror.NewFailedToError("flush "+filename+" file", customerror.WithError(err))
+	}
 
 	return nil
 }
@@ -414,7 +416,10 @@ func DumpToJSON(filename string, content map[string]string) error {
 	}
 
 	// Flush the file.
-	file.Sync()
+	// Flush the file.
+	if err := file.Sync(); err != nil {
+		return customerror.NewFailedToError("flush "+filename+" file", customerror.WithError(err))
+	}
 
 	return nil
 }
@@ -438,7 +443,10 @@ func DumpToYAML(filename string, content map[string]string) error {
 	}
 
 	// Flush the file.
-	file.Sync()
+	// Flush the file.
+	if err := file.Sync(); err != nil {
+		return customerror.NewFailedToError("flush "+filename+" file", customerror.WithError(err))
+	}
 
 	return nil
 }

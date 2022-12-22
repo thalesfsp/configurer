@@ -8,6 +8,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Roadmap
 
 - Backup strategy. When one provider fail, fallback to another.
+- Allows to specify multiple commands.
+
+## [1.1.7] - 2022-12-20
+### Changed
+- Fixed lint
 
 ## [1.1.6] - 2022-12-20
 ### Added
