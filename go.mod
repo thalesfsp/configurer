@@ -12,6 +12,7 @@ require (
 	github.com/spf13/cobra v1.6.0
 	github.com/thalesfsp/customerror v1.0.11
 	github.com/thalesfsp/godotenv v1.4.2
+	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (

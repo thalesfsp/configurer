@@ -22,7 +22,7 @@ type IProvider interface {
 	GetOverride() bool
 
 	// Load retrieves the configuration, and exports it to the environment.
-	Load(ctx context.Context, opts ...option.KeyFunc) error
+	Load(ctx context.Context, opts ...option.KeyFunc) (map[string]string, error)
 }
 
 // Provider contains common settings for all providers.

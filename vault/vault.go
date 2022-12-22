@@ -39,11 +39,13 @@ type Vault struct {
 }
 
 // Load retrieves the configuration, and exports it to the environment.
-func (v *Vault) Load(ctx context.Context, opts ...option.KeyFunc) error {
+func (v *Vault) Load(ctx context.Context, opts ...option.KeyFunc) (map[string]string, error) {
 	secret, err := v.client.KVv2(v.SecretInformation.MountPath).Get(ctx, v.SecretInformation.SecretPath)
 	if err != nil {
-		return customerror.NewFailedToError("get secret", customerror.WithError(err))
+		return nil, customerror.NewFailedToError("get secret", customerror.WithError(err))
 	}
+
+	finalValues := make(map[string]string)
 
 	// Should export secrets to the environment.
 	for key, value := range secret.Data {
@@ -52,12 +54,15 @@ func (v *Vault) Load(ctx context.Context, opts ...option.KeyFunc) error {
 			key = opt(key)
 		}
 
-		if err := provider.ExportToEnvVar(v, key, value); err != nil {
-			return err
+		finalValue, err := provider.ExportToEnvVar(v, key, value)
+		if err != nil {
+			return nil, err
 		}
+
+		finalValues[key] = finalValue
 	}
 
-	return nil
+	return finalValues, nil
 }
 
 // NewWithConfig is the same as New but allows to set/pass additional

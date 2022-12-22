@@ -6,7 +6,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var shutdownTimeout time.Duration
+var (
+	dumpFilename    string
+	shutdownTimeout time.Duration
+)
 
 // loadCmd represents the run command.
 var loadCmd = &cobra.Command{
@@ -22,6 +25,14 @@ func init() {
 		"override",
 		false,
 		"Override the env var with loaded ones",
+	)
+
+	loadCmd.PersistentFlags().StringVarP(
+		&dumpFilename,
+		"dump",
+		"d",
+		"",
+		"If set, will dump the loaded config to a file. The extension determines the format. Supported are: .env, .json, .yaml | .yml",
 	)
 
 	loadCmd.PersistentFlags().DurationVarP(

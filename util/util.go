@@ -2,6 +2,7 @@
 package util
 
 import (
+	"encoding/json"
 	"os"
 	"reflect"
 	"strconv"
@@ -9,6 +10,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/thalesfsp/configurer/internal/validation"
 	"github.com/thalesfsp/customerror"
+	"gopkg.in/yaml.v2"
 )
 
 //////
@@ -370,4 +372,73 @@ func Dump(v any) error {
 	}
 
 	return validation.ValidateStruct(v)
+}
+
+// DumpToEnv dumps `finalValue` to a `.env` file.
+func DumpToEnv(filename string, content map[string]string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return customerror.NewFailedToError("create .env file", customerror.WithError(err))
+	}
+
+	defer file.Close()
+
+	for key, value := range content {
+		if _, err := file.WriteString(key + "=" + value + "\n"); err != nil {
+			return customerror.NewFailedToError("write to .env file", customerror.WithError(err))
+		}
+	}
+
+	// Flush the file.
+	file.Sync()
+
+	return nil
+}
+
+// DumpToJSON dumps `finalValue` to a `configurer.json` file.
+func DumpToJSON(filename string, content map[string]string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return customerror.NewFailedToError("create configurer.json file", customerror.WithError(err))
+	}
+
+	defer file.Close()
+
+	b, err := json.MarshalIndent(content, "", "  ")
+	if err != nil {
+		return customerror.NewFailedToError("marshal final values to json", customerror.WithError(err))
+	}
+
+	if _, err := file.Write(b); err != nil {
+		return customerror.NewFailedToError("write to configurer.json file", customerror.WithError(err))
+	}
+
+	// Flush the file.
+	file.Sync()
+
+	return nil
+}
+
+// DumpToYAML dumps `finalValue` to a `configurer.yaml` file.
+func DumpToYAML(filename string, content map[string]string) error {
+	file, err := os.Create(filename)
+	if err != nil {
+		return customerror.NewFailedToError("create configurer.json file", customerror.WithError(err))
+	}
+
+	defer file.Close()
+
+	b, err := yaml.Marshal(content)
+	if err != nil {
+		return customerror.NewFailedToError("marshal final values to yaml", customerror.WithError(err))
+	}
+
+	if _, err := file.Write(b); err != nil {
+		return customerror.NewFailedToError("write to configurer.yaml file", customerror.WithError(err))
+	}
+
+	// Flush the file.
+	file.Sync()
+
+	return nil
 }

@@ -274,7 +274,7 @@ func TestNew(t *testing.T) {
 			}
 
 			if got != nil && err == nil {
-				if err := got.Load(context.Background(), tt.opts...); (err != nil) != tt.wantErr {
+				if _, err := got.Load(context.Background(), tt.opts...); (err != nil) != tt.wantErr {
 					t.Errorf("Load() error = %v, wantErr %v", err, tt.wantErr)
 				}
 

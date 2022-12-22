@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Backup strategy. When one provider fail, fallback to another.
 
+## [1.1.6] - 2022-12-20
+### Added
+- Added the ability to dump the loaded configuration to a file. Supported extensions are: .env, .json. .yaml, and .yml.
+
 ## [1.1.5] - 2022-12-20
 ### Added
 - NoOp provider.

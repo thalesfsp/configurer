@@ -87,7 +87,7 @@ func TestDotEnv_Load(t *testing.T) {
 			}
 
 			if d != nil {
-				err := d.Load(context.Background(), tt.opts...)
+				_, err := d.Load(context.Background(), tt.opts...)
 				if (err != nil) != tt.wantLoadErr {
 					t.Errorf("DotEnv.Load() error = %v, wantLoadErr %v", err, tt.wantLoadErr)
 					return

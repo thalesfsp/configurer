@@ -20,11 +20,13 @@ type DotEnv struct {
 }
 
 // Load retrieves the configuration, and exports it to the environment.
-func (d *DotEnv) Load(ctx context.Context, opts ...option.KeyFunc) error {
+func (d *DotEnv) Load(ctx context.Context, opts ...option.KeyFunc) (map[string]string, error) {
 	envMap, err := godotenv.Read(d.FilePaths...)
 	if err != nil {
-		return customerror.NewFailedToError("read path", customerror.WithError(err))
+		return nil, customerror.NewFailedToError("read path", customerror.WithError(err))
 	}
+
+	finalValues := make(map[string]string)
 
 	// Should export secrets to the environment.
 	for key, value := range envMap {
@@ -33,12 +35,15 @@ func (d *DotEnv) Load(ctx context.Context, opts ...option.KeyFunc) error {
 			key = opt(key)
 		}
 
-		if err := provider.ExportToEnvVar(d, key, value); err != nil {
-			return err
+		finalValue, err := provider.ExportToEnvVar(d, key, value)
+		if err != nil {
+			return nil, err
 		}
+
+		finalValues[key] = finalValue
 	}
 
-	return nil
+	return finalValues, nil
 }
 
 // New sets up a new DotEnv provider.

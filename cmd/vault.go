@@ -67,7 +67,13 @@ Go's flags.`,
 			log.Fatalln(err)
 		}
 
-		if err := vaultProvider.Load(context.Background()); err != nil {
+		finalValues, err := vaultProvider.Load(context.Background())
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		// Should be able to dump the loaded values to a file.
+		if err := DumpToFile(dumpFilename, finalValues); err != nil {
 			log.Fatalln(err)
 		}
 

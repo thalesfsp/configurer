@@ -19,7 +19,7 @@ func ExampleNew() {
 	}
 
 	// Load will export to the environment all the variables.
-	if err := de.Load(context.Background()); err != nil {
+	if _, err := de.Load(context.Background()); err != nil {
 		log.Fatalln(err)
 	}
 

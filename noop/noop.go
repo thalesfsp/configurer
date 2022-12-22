@@ -46,22 +46,27 @@ func split(v string) (string, string) {
 }
 
 // Load retrieves the configuration, and exports it to the environment.
-func (d *NoOp) Load(ctx context.Context, opts ...option.KeyFunc) error {
+func (n *NoOp) Load(ctx context.Context, opts ...option.KeyFunc) (map[string]string, error) {
+	finalValues := make(map[string]string)
+
 	// Should export secrets to the environment.
 	for _, envVar := range os.Environ() {
-		k, v := split(envVar)
+		key, value := split(envVar)
 
 		// Should allow to specify options.
 		for _, opt := range opts {
-			k = opt(k)
+			key = opt(key)
 		}
 
-		if err := provider.ExportToEnvVar(d, k, v); err != nil {
-			return err
+		finalValue, err := provider.ExportToEnvVar(n, key, value)
+		if err != nil {
+			return nil, err
 		}
+
+		finalValues[key] = finalValue
 	}
 
-	return nil
+	return finalValues, nil
 }
 
 // New sets up a new NoOp provider.
