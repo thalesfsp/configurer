@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Backup strategy. When one provider fail, fallback to another.
 - Allows to specify multiple commands.
 
+## [1.1.11] - 2022-12-23
+### Change
+- Fixed lint
+
 ## [1.1.10] - 2022-12-23
 ### Change
 - Combined output only for multiple commands.

@@ -52,10 +52,6 @@ func runCommand(
 	cmdArgs := strings.TrimSuffix(command+" "+strings.Join(arguments, " "), " ") + " -> "
 
 	if combinedOutput {
-		//////
-		// Create a logger streamer for both stdout and stderr.
-		//////
-
 		logger := log.New(os.Stdout, cmdArgs, log.LstdFlags)
 
 		// Setup a streamer that will pipe `stderr`.
