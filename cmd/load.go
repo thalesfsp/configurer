@@ -7,6 +7,7 @@ import (
 )
 
 var (
+	commands        []string
 	dumpFilename    string
 	shutdownTimeout time.Duration
 )
@@ -20,6 +21,14 @@ var loadCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(loadCmd)
+
+	loadCmd.PersistentFlags().StringSliceVarP(
+		&commands,
+		"commands",
+		"c",
+		[]string{},
+		"Set of commands to be executed",
+	)
 
 	loadCmd.PersistentFlags().Bool(
 		"override",

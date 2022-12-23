@@ -11,7 +11,9 @@ var rootCmd = &cobra.Command{
 	Use:   "configurer",
 	Short: "configurer",
 	Long: `Configurer load configuration/secrets from different
-sources (providers) and export them as env vars.`,
+sources (providers) and export them as env vars. It allows to run
+one or multiple commands with the loaded env vars. See each provider
+documentation for more details.`,
 }
 
 // Execute adds all child commands to the root command and sets flags

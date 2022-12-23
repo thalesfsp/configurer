@@ -31,10 +31,12 @@ The following environment variables can be used to configure the provider:
 - VAULT_TOKEN: The token to use for authentication.
 
 NOTE: If no app role is set, the provider will default to using token.
-NOTE: Alrey exported environment variables have precedence over
+NOTE: Already exported environment variables have precedence over
 loaded ones. Set the overwrite flag to true to override them.
 
-About the command to run:
+## About the command to run
+
+If running only one command:
 - The <command> to run must be the last argument.
 - The command <arguments> must be after the <command>.
 - The <command> will inherit the environment variables from the
@@ -43,9 +45,20 @@ parent process plus the ones loaded from the provider.
 NOTE: A double dash (--) is used to signify the end of command options.
 It's required to distinguish between the flags passed to Go and those
 that aren't. Everything after the double dash won't be considered to be
-Go's flags.`,
+Go's flags.
+
+If running multiple commands:
+Use the flag -c to specify the commands to run. The commands must be
+comma separated. The commands will be run concurrently.
+Example: configurer l v -a https://v.co -t 123 -m secret -p config -c "pwd,ls -la,env"
+
+NOTE: Already exported environment variables have precedence over loaded
+ones. Set the overwrite flag to true to override them.
+
+NOTE: Double dash (--) have precedence over the "-c" flag.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		command, arguments := splitCmdFromArgs(args)
+		// Should be able to override current environment variables.
+		shouldOverride := cmd.Flag("override").Value.String() == "true"
 
 		auth := &vault.Auth{
 			Address:   cmd.Flag("address").Value.String(),
@@ -58,9 +71,6 @@ Go's flags.`,
 			MountPath:  cmd.Flag("mount-path").Value.String(),
 			SecretPath: cmd.Flag("secret-path").Value.String(),
 		}
-
-		// Should be able to override current environment variables.
-		shouldOverride := cmd.Flag("override").Value.String() == "true"
 
 		vaultProvider, err := vault.New(shouldOverride, auth, sI)
 		if err != nil {
@@ -77,7 +87,19 @@ Go's flags.`,
 			log.Fatalln(err)
 		}
 
-		runCommand(vaultProvider, command, arguments)
+		errored := false
+
+		for _, exitCode := range ConcurrentRunner(vaultProvider, commands, args) {
+			if exitCode != 0 {
+				errored = true
+			}
+		}
+
+		if errored {
+			os.Exit(1)
+		}
+
+		os.Exit(0)
 	},
 }
 

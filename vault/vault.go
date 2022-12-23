@@ -172,7 +172,7 @@ func NewWithConfig(
 // - VAULT_TOKEN: The token to use for authentication.
 //
 // NOTE: If no app role is set, the provider will default to using token.
-// NOTE: Alrey exported environment variables have precedence over
+// NOTE: Already exported environment variables have precedence over
 // loaded ones. Set the overwrite flag to true to override them.
 func New(
 	override bool,

@@ -1,7 +1,12 @@
 package cmd
 
 var providerUsageTemplate = `Usage:{{if .Runnable}}
-{{.UseLine}} -- [command to run] [command args]{{end}}{{if .HasAvailableSubCommands}}
+
+For a single command:
+{{.UseLine}} -- [command to run] [command args]
+
+For multiple commands (use the -c flag):
+{{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
 {{.CommandPath}} [command]{{end}}{{if gt (len .Aliases) 0}}
 
 Aliases:
