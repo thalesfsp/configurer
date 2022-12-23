@@ -86,7 +86,7 @@ func runCommand(
 
 	// Start command and wait it to finish.
 	if err := c.Run(); err != nil {
-		log.Fatalln(err)
+		return 1
 	}
 
 	c.Wait()
