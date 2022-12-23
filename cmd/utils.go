@@ -40,29 +40,35 @@ func runCommand(
 	p provider.IProvider,
 	command string,
 	arguments []string,
+	combinedOutput bool,
 ) int {
 	c := exec.Command(command, arguments...)
+
+	c.Stderr = os.Stderr
+	c.Stdin = os.Stdin
+	c.Stdout = os.Stdout
 
 	// Builds the prefix.
 	cmdArgs := strings.TrimSuffix(command+" "+strings.Join(arguments, " "), " ") + " -> "
 
-	//////
-	// Create a logger streamer for both stdout and stderr.
-	//////
+	if combinedOutput {
+		//////
+		// Create a logger streamer for both stdout and stderr.
+		//////
 
-	logger := log.New(os.Stdout, cmdArgs, log.LstdFlags)
+		logger := log.New(os.Stdout, cmdArgs, log.LstdFlags)
 
-	// Setup a streamer that will pipe to `stdout`.
-	logStreamerOut := logstreamer.NewLogstreamer(logger, "stdout", false)
-	defer logStreamerOut.Close()
+		// Setup a streamer that will pipe `stderr`.
+		logStreamerErr := logstreamer.NewLogstreamer(logger, "stderr", true)
+		defer logStreamerErr.Close()
 
-	// Setup a streamer that will pipe `stderr`.
-	logStreamerErr := logstreamer.NewLogstreamer(logger, "stderr", true)
-	defer logStreamerErr.Close()
+		// Setup a streamer that will pipe to `stdout`.
+		logStreamerOut := logstreamer.NewLogstreamer(logger, "stdout", false)
+		defer logStreamerOut.Close()
 
-	c.Stdout = logStreamerOut
-	c.Stderr = logStreamerErr
-	c.Stdin = os.Stdin
+		c.Stderr = logStreamerErr
+		c.Stdout = logStreamerOut
+	}
 
 	// Should kill the command after the specified timeout, and if received
 	// a SIGINT.
@@ -117,7 +123,7 @@ func ConcurrentRunner(p provider.IProvider, cmds []string, args []string) []int 
 
 		command, arguments := splitCmdFromArgs(args)
 
-		exitCodes = append(exitCodes, runCommand(p, command, arguments))
+		exitCodes = append(exitCodes, runCommand(p, command, arguments, false))
 
 		wg.Done()
 	} else {
@@ -134,7 +140,7 @@ func ConcurrentRunner(p provider.IProvider, cmds []string, args []string) []int 
 			c, a := splitCmdFromArgs(cmdArgs)
 
 			go func() {
-				exitCodes = append(exitCodes, runCommand(p, c, a))
+				exitCodes = append(exitCodes, runCommand(p, c, a, true))
 
 				wg.Done()
 			}()
