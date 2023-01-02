@@ -150,25 +150,20 @@ func ConcurrentRunner(p provider.IProvider, cmds []string, args []string) []int 
 
 // DumpToFile dumps the final loaded values to a file. Extension is used to
 // determine the format.
-func DumpToFile(filename string, finalValues map[string]string) error {
-	// Should be able to dump the loaded values to a file.
-	if filename == "" {
-		return nil
-	}
-
-	extension := filepath.Ext(filename)
+func DumpToFile(file *os.File, finalValues map[string]string) error {
+	extension := filepath.Ext(file.Name())
 
 	switch extension {
 	case ".env":
-		if err := util.DumpToEnv(filename, finalValues); err != nil {
+		if err := util.DumpToEnv(file, finalValues); err != nil {
 			return err
 		}
 	case ".json":
-		if err := util.DumpToJSON(filename, finalValues); err != nil {
+		if err := util.DumpToJSON(file, finalValues); err != nil {
 			return err
 		}
 	case ".yaml", ".yml":
-		if err := util.DumpToYAML(filename, finalValues); err != nil {
+		if err := util.DumpToYAML(file, finalValues); err != nil {
 			return err
 		}
 	default:

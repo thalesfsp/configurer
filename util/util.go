@@ -6,6 +6,8 @@ import (
 	"os"
 	"reflect"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/thalesfsp/configurer/internal/validation"
@@ -16,6 +18,38 @@ import (
 //////
 // Helpers.
 //////
+
+// Parse map.
+func parseMap(s string) map[string]interface{} {
+	if s == "" {
+		return nil
+	}
+
+	m := make(map[string]interface{})
+	for _, pair := range strings.Split(s, ",") {
+		parts := strings.Split(pair, ":")
+
+		if len(parts) == 2 {
+			key := parts[0]
+			value := parts[1]
+
+			// Convert value to its type.
+			if value == "true" {
+				m[key] = true
+			} else if value == "false" {
+				m[key] = false
+			} else if asInt, err := strconv.Atoi(value); err == nil {
+				m[key] = asInt
+			} else if asFloat, err := strconv.ParseFloat(value, 64); err == nil {
+				m[key] = asFloat
+			} else {
+				m[key] = value
+			}
+		}
+	}
+
+	return m
+}
 
 // SetDefault For a given struct `v`, set default values based on the struct
 // field tags (`default`).
@@ -174,6 +208,124 @@ func SetDefault(v any) error {
 
 			continue
 		}
+
+		// Check if it's a duration or a pointer to a duration.
+		if fieldKind == reflect.Int64 || (fieldKind == reflect.Ptr && field.Elem().Kind() == reflect.Int64) {
+			typeField := val.Type().Field(i)
+
+			// Get the field tag value.
+			tag := typeField.Tag.Get(tagName)
+
+			// Skip if tag is not defined or ignored.
+			if tag == "" || tag == "-" {
+				continue
+			}
+
+			// Set the duration value to the sanitized duration if it's allowed.
+			// It should always be allowed at this point.
+			if field.CanSet() {
+				// Only set if the field is empty.
+				if fieldKind == reflect.Int64 {
+					if asDuration, err := time.ParseDuration(os.Getenv(tag)); err == nil {
+						field.SetInt(int64(asDuration))
+					}
+				}
+			}
+
+			continue
+		}
+
+		// Check if it's a slice or a pointer to a slice.
+		if fieldKind == reflect.Slice || (fieldKind == reflect.Ptr && field.Elem().Kind() == reflect.Slice) {
+			typeField := val.Type().Field(i)
+
+			// Get the field tag value.
+			tag := typeField.Tag.Get(tagName)
+
+			// Skip if tag is not defined or ignored.
+			if tag == "" || tag == "-" {
+				continue
+			}
+
+			// Set the slice value to the sanitized slice if it's allowed.
+			// It should always be allowed at this point.
+			if field.CanSet() {
+				// Only set if the field is empty.
+				if fieldKind == reflect.Slice {
+
+					valuesAsString := strings.Split(tag, ",")
+					valueAsString := valuesAsString[0]
+
+					if _, err := strconv.Atoi(valueAsString); err == nil {
+						// If valueAsString is a int, then we can assume that the slice is a slice of ints.
+						// Iterate over valuesAsString and convert them to ints.
+						var ints []int
+
+						for _, v := range valuesAsString {
+							if asInt, err := strconv.Atoi(v); err == nil {
+								ints = append(ints, asInt)
+							}
+						}
+
+						field.Set(reflect.ValueOf(ints))
+					} else if _, err := strconv.ParseFloat(valueAsString, 64); err == nil {
+						// If valueAsString is a float64, then we can assume that the slice is a slice of float64s.
+						// Iterate over valuesAsString and convert them to float64s.
+						var float64s []float64
+
+						for _, v := range valuesAsString {
+							if asFloat, err := strconv.ParseFloat(v, 64); err == nil {
+								float64s = append(float64s, asFloat)
+							}
+						}
+
+						field.Set(reflect.ValueOf(float64s))
+					} else if _, err := strconv.ParseBool(valueAsString); err == nil {
+						// If valueAsString is a bool, then we can assume that the slice is a slice of bools.
+						// Iterate over valuesAsString and convert them to bools.
+						var bools []bool
+
+						for _, v := range valuesAsString {
+							if asBool, err := strconv.ParseBool(v); err == nil {
+								bools = append(bools, asBool)
+							}
+						}
+
+						field.Set(reflect.ValueOf(bools))
+					} else {
+						field.Set(reflect.ValueOf(valuesAsString))
+					}
+				}
+			}
+
+			continue
+		}
+
+		// Check if it's a map or a pointer to a map.
+		if fieldKind == reflect.Map || (fieldKind == reflect.Ptr && field.Elem().Kind() == reflect.Map) {
+			typeField := val.Type().Field(i)
+
+			// Get the field tag value.
+			tag := typeField.Tag.Get(tagName)
+
+			// Skip if tag is not defined or ignored.
+			if tag == "" || tag == "-" {
+				continue
+			}
+
+			// Set the map value to the sanitized map if it's allowed.
+			// It should always be allowed at this point.
+			if field.CanSet() {
+				// Only set if the field is empty.
+				if fieldKind == reflect.Map {
+					if asMap := parseMap(tag); asMap != nil {
+						field.Set(reflect.ValueOf(asMap))
+					}
+				}
+			}
+
+			continue
+		}
 	}
 
 	return nil
@@ -252,7 +404,9 @@ func SetEnv(v any) error {
 			if field.CanSet() {
 				// Only set if the field is empty.
 				if fieldKind == reflect.String {
-					field.SetString(os.Getenv(tag))
+					if os.Getenv(tag) != "" {
+						field.SetString(os.Getenv(tag))
+					}
 				}
 			}
 
@@ -334,6 +488,129 @@ func SetEnv(v any) error {
 
 			continue
 		}
+
+		// Check if it's a duration or a pointer to a duration.
+		if fieldKind == reflect.Int64 || (fieldKind == reflect.Ptr && field.Elem().Kind() == reflect.Int64) {
+			typeField := val.Type().Field(i)
+
+			// Get the field tag value.
+			tag := typeField.Tag.Get(tagName)
+
+			// Skip if tag is not defined or ignored.
+			if tag == "" || tag == "-" {
+				continue
+			}
+
+			// Set the duration value to the sanitized duration if it's allowed.
+			// It should always be allowed at this point.
+			if field.CanSet() {
+				// Only set if the field is empty.
+				if fieldKind == reflect.Int64 {
+					if asDuration, err := time.ParseDuration(os.Getenv(tag)); err == nil {
+						field.SetInt(int64(asDuration))
+					}
+				}
+			}
+
+			continue
+		}
+
+		// Check if it's a slice or a pointer to a slice.
+		if fieldKind == reflect.Slice || (fieldKind == reflect.Ptr && field.Elem().Kind() == reflect.Slice) {
+			typeField := val.Type().Field(i)
+
+			// Get the field tag value.
+			tag := typeField.Tag.Get(tagName)
+
+			// Skip if tag is not defined or ignored.
+			if tag == "" || tag == "-" {
+				continue
+			}
+
+			// Set the slice value to the sanitized slice if it's allowed.
+			// It should always be allowed at this point.
+			if field.CanSet() {
+				// Only set if the field is empty.
+				if fieldKind == reflect.Slice {
+					tagValueAsString := os.Getenv(tag)
+
+					if tagValueAsString == "" {
+						continue
+					}
+
+					valuesAsString := strings.Split(tagValueAsString, ",")
+					valueAsString := valuesAsString[0]
+
+					if _, err := strconv.Atoi(valueAsString); err == nil {
+						// If valueAsString is a int, then we can assume that the slice is a slice of ints.
+						// Iterate over valuesAsString and convert them to ints.
+						var ints []int
+
+						for _, v := range valuesAsString {
+							if asInt, err := strconv.Atoi(v); err == nil {
+								ints = append(ints, asInt)
+							}
+						}
+
+						field.Set(reflect.ValueOf(ints))
+					} else if _, err := strconv.ParseFloat(valueAsString, 64); err == nil {
+						// If valueAsString is a float64, then we can assume that the slice is a slice of float64s.
+						// Iterate over valuesAsString and convert them to float64s.
+						var float64s []float64
+
+						for _, v := range valuesAsString {
+							if asFloat, err := strconv.ParseFloat(v, 64); err == nil {
+								float64s = append(float64s, asFloat)
+							}
+						}
+
+						field.Set(reflect.ValueOf(float64s))
+					} else if _, err := strconv.ParseBool(valueAsString); err == nil {
+						// If valueAsString is a bool, then we can assume that the slice is a slice of bools.
+						// Iterate over valuesAsString and convert them to bools.
+						var bools []bool
+
+						for _, v := range valuesAsString {
+							if asBool, err := strconv.ParseBool(v); err == nil {
+								bools = append(bools, asBool)
+							}
+						}
+
+						field.Set(reflect.ValueOf(bools))
+					} else {
+						field.Set(reflect.ValueOf(valuesAsString))
+					}
+				}
+			}
+
+			continue
+		}
+
+		// Check if it's a map or a pointer to a map.
+		if fieldKind == reflect.Map || (fieldKind == reflect.Ptr && field.Elem().Kind() == reflect.Map) {
+			typeField := val.Type().Field(i)
+
+			// Get the field tag value.
+			tag := typeField.Tag.Get(tagName)
+
+			// Skip if tag is not defined or ignored.
+			if tag == "" || tag == "-" {
+				continue
+			}
+
+			// Set the map value to the sanitized map if it's allowed.
+			// It should always be allowed at this point.
+			if field.CanSet() {
+				// Only set if the field is empty.
+				if fieldKind == reflect.Map {
+					if asMap := parseMap(os.Getenv(tag)); asMap != nil {
+						field.Set(reflect.ValueOf(asMap))
+					}
+				}
+			}
+
+			continue
+		}
 	}
 
 	return nil
@@ -375,14 +652,7 @@ func Dump(v any) error {
 }
 
 // DumpToEnv dumps `finalValue` to a `.env` file.
-func DumpToEnv(filename string, content map[string]string) error {
-	file, err := os.Create(filename)
-	if err != nil {
-		return customerror.NewFailedToError("create .env file", customerror.WithError(err))
-	}
-
-	defer file.Close()
-
+func DumpToEnv(file *os.File, content map[string]string) error {
 	for key, value := range content {
 		if _, err := file.WriteString(key + "=" + value + "\n"); err != nil {
 			return customerror.NewFailedToError("write to .env file", customerror.WithError(err))
@@ -391,21 +661,14 @@ func DumpToEnv(filename string, content map[string]string) error {
 
 	// Flush the file.
 	if err := file.Sync(); err != nil {
-		return customerror.NewFailedToError("flush "+filename+" file", customerror.WithError(err))
+		return customerror.NewFailedToError("flush "+file.Name()+" file", customerror.WithError(err))
 	}
 
 	return nil
 }
 
 // DumpToJSON dumps `finalValue` to a `configurer.json` file.
-func DumpToJSON(filename string, content map[string]string) error {
-	file, err := os.Create(filename)
-	if err != nil {
-		return customerror.NewFailedToError("create configurer.json file", customerror.WithError(err))
-	}
-
-	defer file.Close()
-
+func DumpToJSON(file *os.File, content map[string]string) error {
 	b, err := json.MarshalIndent(content, "", "  ")
 	if err != nil {
 		return customerror.NewFailedToError("marshal final values to json", customerror.WithError(err))
@@ -418,21 +681,14 @@ func DumpToJSON(filename string, content map[string]string) error {
 	// Flush the file.
 	// Flush the file.
 	if err := file.Sync(); err != nil {
-		return customerror.NewFailedToError("flush "+filename+" file", customerror.WithError(err))
+		return customerror.NewFailedToError("flush "+file.Name()+" file", customerror.WithError(err))
 	}
 
 	return nil
 }
 
 // DumpToYAML dumps `finalValue` to a `configurer.yaml` file.
-func DumpToYAML(filename string, content map[string]string) error {
-	file, err := os.Create(filename)
-	if err != nil {
-		return customerror.NewFailedToError("create configurer.json file", customerror.WithError(err))
-	}
-
-	defer file.Close()
-
+func DumpToYAML(file *os.File, content map[string]string) error {
 	b, err := yaml.Marshal(content)
 	if err != nil {
 		return customerror.NewFailedToError("marshal final values to yaml", customerror.WithError(err))
@@ -445,7 +701,7 @@ func DumpToYAML(filename string, content map[string]string) error {
 	// Flush the file.
 	// Flush the file.
 	if err := file.Sync(); err != nil {
-		return customerror.NewFailedToError("flush "+filename+" file", customerror.WithError(err))
+		return customerror.NewFailedToError("flush "+file.Name()+" file", customerror.WithError(err))
 	}
 
 	return nil

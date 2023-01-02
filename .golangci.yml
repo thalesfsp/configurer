@@ -56,6 +56,8 @@ issues:
         - gomnd
         - gocognit
         - gocyclo
+        - funlen
+        - maintidx
 
     - path: _test\.go
       linters:

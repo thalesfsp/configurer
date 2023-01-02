@@ -83,8 +83,17 @@ NOTE: Double dash (--) have precedence over the "-c" flag.`,
 		}
 
 		// Should be able to dump the loaded values to a file.
-		if err := DumpToFile(dumpFilename, finalValues); err != nil {
-			log.Fatalln(err)
+		if dumpFilename != "" {
+			file, err := os.Create(dumpFilename)
+			if err != nil {
+				log.Fatalln(err)
+			}
+
+			defer file.Close()
+
+			if err := DumpToFile(file, finalValues); err != nil {
+				log.Fatalln(err)
+			}
 		}
 
 		errored := false

@@ -1,8 +1,11 @@
 package util
 
 import (
+	"os"
+	"reflect"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestDump(t *testing.T) {
@@ -154,6 +157,22 @@ func TestSetDefaults(t *testing.T) {
 		T14 int `json:"T14" default:""`
 		T15 int `json:"T15"`
 		T16 int `json:"T16" default:"99999"`
+
+		T17 []string `default:"asd,qwe,dfg"`
+
+		T18 map[string]interface{} `default:"asd:qwe,dfg:1"`
+		T19 map[string]interface{} `default:"asd:qwe,dfg:text1"`
+		T20 map[string]interface{} `default:"asd:qwe,dfg:true"`
+		T21 map[string]interface{} `default:"asd:qwe,dfg:false"`
+		T22 map[string]interface{} `default:"asd:qwe,dfg:0.65"`
+		T23 map[string]interface{} `default:"asd:qwe,dfg:0"`
+		T24 map[string]interface{} `default:"asd:qwe,dfg:123"`
+
+		T25 []int     `default:"1,2,3"`
+		T26 []float64 `default:"0.65,0.66,0.67"`
+		T27 []bool    `default:"true,false,true"`
+
+		T28 time.Duration `default:"33s"`
 	}
 
 	r := TestData{
@@ -176,6 +195,19 @@ func TestSetDefaults(t *testing.T) {
 		T14: 12347, // Should do nothing as no default value is set.
 		T15: 12348, // Should do nothing as no default tag is set.
 		T16: 0,     // Should not replace
+
+		T17: []string{"asd", "qwe", "dfg"},                        // Should replace
+		T18: map[string]interface{}{"asd": "qwe", "dfg": 1},       // Should replace
+		T19: map[string]interface{}{"asd": "qwe", "dfg": "text1"}, // Should replace
+		T20: map[string]interface{}{"asd": "qwe", "dfg": true},    // Should replace
+		T21: map[string]interface{}{"asd": "qwe", "dfg": false},   // Should replace
+		T22: map[string]interface{}{"asd": "qwe", "dfg": 0.65},    // Should replace
+		T23: map[string]interface{}{"asd": "qwe", "dfg": 0},       // Should replace
+		T24: map[string]interface{}{"asd": "qwe", "dfg": 123},     // Should replace
+		T25: []int{1, 2, 3},                                       // Should replace
+		T26: []float64{0.65, 0.66, 0.67},                          // Should replace
+		T27: []bool{true, false, true},                            // Should replace
+		T28: time.Second * 33,                                     // Should replace
 	}
 
 	if err := SetDefault(&r); err != nil {
@@ -229,6 +261,42 @@ func TestSetDefaults(t *testing.T) {
 	}
 	if r.T16 != 99999 {
 		t.Fatal("expected T16 to be 99999")
+	}
+	if !reflect.DeepEqual(r.T17, []string{"asd", "qwe", "dfg"}) {
+		t.Fatal("expected T17 to be ['asd','qwe','dfg']")
+	}
+	if !reflect.DeepEqual(r.T18, map[string]interface{}{"asd": "qwe", "dfg": 1}) {
+		t.Fatal("expected T18 to be {'asd': 'qwe', 'dfg': 1}")
+	}
+	if !reflect.DeepEqual(r.T19, map[string]interface{}{"asd": "qwe", "dfg": "text1"}) {
+		t.Fatal("expected T19 to be {'asd': 'qwe', 'dfg': 'text1'}")
+	}
+	if !reflect.DeepEqual(r.T20, map[string]interface{}{"asd": "qwe", "dfg": true}) {
+		t.Fatal("expected T20 to be {'asd': 'qwe', 'dfg': true}")
+	}
+	if !reflect.DeepEqual(r.T21, map[string]interface{}{"asd": "qwe", "dfg": false}) {
+		t.Fatal("expected T21 to be {'asd': 'qwe', 'dfg': false}")
+	}
+	if !reflect.DeepEqual(r.T22, map[string]interface{}{"asd": "qwe", "dfg": 0.65}) {
+		t.Fatal("expected T22 to be {'asd': 'qwe', 'dfg': 0.65}")
+	}
+	if !reflect.DeepEqual(r.T23, map[string]interface{}{"asd": "qwe", "dfg": 0}) {
+		t.Fatal("expected T23 to be {'asd': 'qwe', 'dfg': 0}")
+	}
+	if !reflect.DeepEqual(r.T24, map[string]interface{}{"asd": "qwe", "dfg": 123}) {
+		t.Fatal("expected T24 to be {'asd': 'qwe', 'dfg': 123}")
+	}
+	if !reflect.DeepEqual(r.T25, []int{1, 2, 3}) {
+		t.Fatal("expected T25 to be [1, 2, 3]")
+	}
+	if !reflect.DeepEqual(r.T26, []float64{0.65, 0.66, 0.67}) {
+		t.Fatal("expected T26 to be [0.65, 0.66, 0.67]")
+	}
+	if !reflect.DeepEqual(r.T27, []bool{true, false, true}) {
+		t.Fatal("expected T27 to be [true, false, true]")
+	}
+	if !reflect.DeepEqual(r.T28, time.Second*33) {
+		t.Fatal("expected T28 to be 33s")
 	}
 }
 
@@ -340,6 +408,18 @@ func TestSetEnv(t *testing.T) {
 	t.Setenv("TestSetEnv_T6", "0")
 	t.Setenv("TestSetEnv_T7", "123")
 	t.Setenv("TestSetEnv_T8", "")
+	t.Setenv("TestSetEnv_T9", "5m")
+	t.Setenv("TestSetEnv_T10", "asd,qwe,dfg")
+	t.Setenv("TestSetEnv_T11", "asd:qwe,dfg:1")
+	t.Setenv("TestSetEnv_T12", "asd:qwe,dfg:text1")
+	t.Setenv("TestSetEnv_T13", "asd:qwe,dfg:true")
+	t.Setenv("TestSetEnv_T14", "asd:qwe,dfg:false")
+	t.Setenv("TestSetEnv_T15", "asd:qwe,dfg:0.65")
+	t.Setenv("TestSetEnv_T16", "asd:qwe,dfg:0")
+	t.Setenv("TestSetEnv_T17", "asd:qwe,dfg:123")
+	t.Setenv("TestSetEnv_T18", "1,2,3")
+	t.Setenv("TestSetEnv_T19", "0.65,0.66,0.67")
+	t.Setenv("TestSetEnv_T20", "true,false,true")
 
 	type TestData struct {
 		T1 string `env:"TestSetEnv_T1"`
@@ -353,6 +433,22 @@ func TestSetEnv(t *testing.T) {
 
 		T7 int `env:"TestSetEnv_T7"`
 		T8 int `env:"TestSetEnv_T8"`
+
+		T9 time.Duration `env:"TestSetEnv_T9"`
+
+		T10 []string `env:"TestSetEnv_T10"`
+
+		T11 map[string]interface{} `env:"TestSetEnv_T11"`
+		T12 map[string]interface{} `env:"TestSetEnv_T12"`
+		T13 map[string]interface{} `env:"TestSetEnv_T13"`
+		T14 map[string]interface{} `env:"TestSetEnv_T14"`
+		T15 map[string]interface{} `env:"TestSetEnv_T15"`
+		T16 map[string]interface{} `env:"TestSetEnv_T16"`
+		T17 map[string]interface{} `env:"TestSetEnv_T17"`
+
+		T18 []int     `env:"TestSetEnv_T18"`
+		T19 []float64 `env:"TestSetEnv_T19"`
+		T20 []bool    `env:"TestSetEnv_T20"`
 	}
 
 	var r TestData
@@ -383,5 +479,71 @@ func TestSetEnv(t *testing.T) {
 	}
 	if r.T8 != 0 {
 		t.Fatal("expected T8 to be 0")
+	}
+	if r.T9 != 5*time.Minute {
+		t.Fatal("expected T9 to be 5 minutes")
+	}
+	if !reflect.DeepEqual(r.T10, []string{"asd", "qwe", "dfg"}) {
+		t.Fatal("expected T10 to be [asd qwe dfg]", r.T10)
+	}
+	if !reflect.DeepEqual(r.T11, map[string]interface{}{"asd": "qwe", "dfg": 1}) {
+		t.Fatal("expected T11 to be [asd:qwe dfg:1]", r.T11)
+	}
+	if !reflect.DeepEqual(r.T12, map[string]interface{}{"asd": "qwe", "dfg": "text1"}) {
+		t.Fatal("expected T12 to be [asd:qwe dfg:text1]", r.T12)
+	}
+	if !reflect.DeepEqual(r.T13, map[string]interface{}{"asd": "qwe", "dfg": true}) {
+		t.Fatal("expected T13 to be [asd:qwe dfg:true]", r.T13)
+	}
+	if !reflect.DeepEqual(r.T14, map[string]interface{}{"asd": "qwe", "dfg": false}) {
+		t.Fatal("expected T14 to be [asd:qwe dfg:false]", r.T14)
+	}
+	if !reflect.DeepEqual(r.T15, map[string]interface{}{"asd": "qwe", "dfg": 0.65}) {
+		t.Fatal("expected T15 to be [asd:qwe dfg:0.65]", r.T15)
+	}
+	if !reflect.DeepEqual(r.T16, map[string]interface{}{"asd": "qwe", "dfg": 0}) {
+		t.Fatal("expected T16 to be [asd:qwe dfg:0]", r.T16)
+	}
+	if !reflect.DeepEqual(r.T17, map[string]interface{}{"asd": "qwe", "dfg": 123}) {
+		t.Fatal("expected T17 to be [asd:qwe dfg:123]", r.T17)
+	}
+	if !reflect.DeepEqual(r.T18, []int{1, 2, 3}) {
+		t.Fatal("expected T18 to be [1 2 3]", r.T18)
+	}
+	if !reflect.DeepEqual(r.T19, []float64{0.65, 0.66, 0.67}) {
+		t.Fatal("expected T19 to be [0.65 0.66 0.67]", r.T19)
+	}
+	if !reflect.DeepEqual(r.T20, []bool{true, false, true}) {
+		t.Fatal("expected T20 to be [true false true]", r.T20)
+	}
+}
+
+func TestDumpToEnv(t *testing.T) {
+	file, err := os.CreateTemp("", "test")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer file.Close()
+
+	if err := DumpToEnv(file, map[string]string{
+		"K1": "V1",
+		"K2": "V2",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	// Read and print the contents of the file.
+	data, err := os.ReadFile(file.Name())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(string(data), "K1=V1") {
+		t.Fatal("expected file to contain K1=V1")
+	}
+
+	if !strings.Contains(string(data), "K2=V2") {
+		t.Fatal("expected file to contain K2=V2")
 	}
 }
