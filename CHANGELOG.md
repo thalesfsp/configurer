@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Backup strategy. When one provider fail, fallback to another.
 - Allows to specify multiple commands.
 
+## [1.1.13] - 2023-01-01
+### Change
+- Fixed lint
+
 ## [1.1.12] - 2022-12-28
 ### Change
 - Added the ability of the `env` tag to parse: `string`, `bool`, `int`, `float64`, `duration`, `slice` or `map`. `slice` and `map` of `string`, `bool`, `int`, or `float64`.

@@ -26,6 +26,7 @@ func parseMap(s string) map[string]interface{} {
 	}
 
 	m := make(map[string]interface{})
+
 	for _, pair := range strings.Split(s, ",") {
 		parts := strings.Split(pair, ":")
 
@@ -252,7 +253,6 @@ func SetDefault(v any) error {
 			if field.CanSet() {
 				// Only set if the field is empty.
 				if fieldKind == reflect.Slice {
-
 					valuesAsString := strings.Split(tag, ",")
 					valueAsString := valuesAsString[0]
 

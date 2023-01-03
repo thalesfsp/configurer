@@ -58,6 +58,10 @@ issues:
         - gocyclo
         - funlen
         - maintidx
+        - dupl
+        - goconst
+        - complexity
+        - nestif
 
     - path: _test\.go
       linters:
