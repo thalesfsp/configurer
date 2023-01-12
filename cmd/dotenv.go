@@ -7,6 +7,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/thalesfsp/configurer/dotenv"
+	"github.com/thalesfsp/configurer/option"
 )
 
 var dotEnvFiles []string
@@ -53,7 +54,17 @@ NOTE: Double dash (--) have precedence over the "-c" flag.
 			log.Fatalln(err)
 		}
 
-		finalValues, err := dotEnvProvider.Load(context.Background())
+		var options []option.KeyFunc
+
+		if keyCaserOptions != "" {
+			options = append(options, option.WithKeyCaser(keyCaserOptions))
+		}
+
+		if keyPrefixerOptions != "" {
+			options = append(options, option.WithKeyPrefixer(keyPrefixerOptions))
+		}
+
+		finalValues, err := dotEnvProvider.Load(context.Background(), options...)
 		if err != nil {
 			log.Fatalln(err)
 		}

@@ -8,26 +8,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## Roadmap
 
 - Backup strategy. When one provider fail, fallback to another.
-- Allows to specify multiple commands.
+
+## [1.1.14] - 2023-01-12
+### Added
+- Ability to use options from the CLI.
 
 ## [1.1.13] - 2023-01-01
-### Change
+### Changed
 - Fixed lint
 
 ## [1.1.12] - 2022-12-28
-### Change
+### Changed
 - Added the ability of the `env` tag to parse: `string`, `bool`, `int`, `float64`, `duration`, `slice` or `map`. `slice` and `map` of `string`, `bool`, `int`, or `float64`.
 
 ## [1.1.11] - 2022-12-23
-### Change
+### Changed
 - Fixed lint
 
 ## [1.1.10] - 2022-12-23
-### Change
+### Changed
 - Combined output only for multiple commands.
 
 ## [1.1.9] - 2022-12-23
-### Change
+### Changed
 - Fixed lint
 
 ## [1.1.8] - 2022-12-23

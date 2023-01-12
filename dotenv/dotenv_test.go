@@ -55,7 +55,7 @@ func TestDotEnv_Load(t *testing.T) {
 				FilePaths: []string{"testing.env"},
 			},
 			opts: []option.KeyFunc{
-				option.WithKeyCaser(option.Uppercase),
+				option.WithKeyCaser("upper"),
 				option.WithKeyPrefixer("TESTING_DOTENV_"),
 			},
 			wantKey: "TESTING_DOTENV_TEST_KEY",
@@ -70,7 +70,7 @@ func TestDotEnv_Load(t *testing.T) {
 				option.WithKeyReplacer(func(key string) string {
 					return "TESTING123_" + key
 				}),
-				option.WithKeyCaser(option.Lowercase),
+				option.WithKeyCaser(option.Lower),
 			},
 			wantKey: "testing123_test_key",
 			wantErr: false,

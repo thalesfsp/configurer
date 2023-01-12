@@ -1,15 +1,19 @@
 package cmd
 
 import (
+	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/thalesfsp/configurer/option"
 )
 
 var (
-	commands        []string
-	dumpFilename    string
-	shutdownTimeout time.Duration
+	commands           []string
+	dumpFilename       string
+	keyCaserOptions    string
+	keyPrefixerOptions string
+	shutdownTimeout    time.Duration
 )
 
 // loadCmd represents the run command.
@@ -50,6 +54,22 @@ func init() {
 		"s",
 		30*time.Second,
 		"The timeout to wait for the command to shutdown",
+	)
+
+	loadCmd.PersistentFlags().StringVarP(
+		&keyCaserOptions,
+		"key-caser",
+		"k",
+		"",
+		"Set the key casing. Supported: "+strings.Join(option.AllowedCases, ","),
+	)
+
+	loadCmd.PersistentFlags().StringVarP(
+		&keyPrefixerOptions,
+		"key-prefixer",
+		"x",
+		"",
+		"Set the key prefix",
 	)
 
 	loadCmd.SetUsageTemplate(`Usage:{{if .Runnable}}

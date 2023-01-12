@@ -66,7 +66,7 @@ func TestNew(t *testing.T) {
 
 	defaultOptions := []option.KeyFunc{
 		option.WithKeyPrefixer(prefix),
-		option.WithKeyCaser(option.Uppercase),
+		option.WithKeyCaser("upper"),
 	}
 
 	type args struct {

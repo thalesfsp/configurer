@@ -9,6 +9,7 @@ go 1.19
 require (
 	github.com/go-playground/validator/v10 v10.11.1
 	github.com/hashicorp/vault/api v1.8.0
+	github.com/iancoleman/strcase v0.2.0
 	github.com/kvz/logstreamer v0.0.0-20221024075423-bf5cfbd32e39
 	github.com/spf13/cobra v1.6.0
 	github.com/thalesfsp/customerror v1.0.11

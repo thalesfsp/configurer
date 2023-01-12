@@ -30,7 +30,7 @@ func TestNoOp_Load(t *testing.T) {
 		{
 			name: "should work with options",
 			opts: []option.KeyFunc{
-				option.WithKeyCaser(option.Uppercase),
+				option.WithKeyCaser("upper"),
 				option.WithKeyPrefixer("TESTING_DOTENV_"),
 			},
 			wantKey: "TESTING_DOTENV_TEST_KEY",
@@ -42,7 +42,7 @@ func TestNoOp_Load(t *testing.T) {
 				option.WithKeyReplacer(func(key string) string {
 					return "TESTING123_" + key
 				}),
-				option.WithKeyCaser(option.Lowercase),
+				option.WithKeyCaser("lower"),
 			},
 			wantKey: "testing123_test_key",
 			wantErr: false,
