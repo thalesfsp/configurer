@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Backup strategy. When one provider fail, fallback to another.
 
+## [1.1.15] - 2023-01-17
+### Changed
+- Fixed bug parsing default duration.
+
 ## [1.1.14] - 2023-01-12
 ### Added
 - Ability to use options from the CLI.
