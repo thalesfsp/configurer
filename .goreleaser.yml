@@ -44,7 +44,7 @@ source:
 signs:
   - cmd: cosign
     signature: "${artifact}.sig"
-    args: ["sign-blob", "--oidc-issuer=https://token.actions.githubusercontent.com", "--output=${signature}", "${artifact}"]
+    args: ["sign-blob", "--yes", "--oidc-issuer=https://token.actions.githubusercontent.com", "--output=${signature}", "${artifact}"]
     artifacts: all
 
 checksum:
