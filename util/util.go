@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 	"github.com/thalesfsp/configurer/internal/validation"
 )
 
@@ -50,4 +51,10 @@ func parseMap(s string) map[string]interface{} {
 // custom validators.
 func GetValidator() *validator.Validate {
 	return validation.Get()
+}
+
+// GenerateUUID generates a RFC4122 UUID and DCE 1.1: Authentication and
+// Security Services.
+func GenerateUUID() string {
+	return uuid.New().String()
 }

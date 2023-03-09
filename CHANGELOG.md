@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Backup strategy. When one provider fail, fallback to another.
 
+## [1.1.16] - 2023-03-08
+### Added
+- The `id` tag. It generates a unique ID for the field if none is specified. Otherwise, it uses the specified ID. Set no ID if field is already set.
+
 ## [1.1.15] - 2023-01-17
 ### Changed
 - Fixed bug parsing default duration.

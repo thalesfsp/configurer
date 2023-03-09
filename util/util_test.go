@@ -547,3 +547,71 @@ func TestDumpToEnv(t *testing.T) {
 		t.Fatal("expected file to contain K2=V2")
 	}
 }
+
+func TestSetID(t *testing.T) {
+	type TestData struct {
+		ID string `id:""`
+	}
+
+	testCases := []struct {
+		name         string
+		input        TestData
+		expectedID   string
+		expectedLen  int
+		expectErrMsg bool
+	}{
+		{
+			name:        "empty id",
+			input:       TestData{},
+			expectedLen: 36,
+		},
+		{
+			name: "specifying id",
+			input: TestData{
+				ID: "123123123",
+			},
+			expectedID:  "123123123",
+			expectedLen: 9,
+		},
+		{
+			name: "with ID, not specifying id",
+			input: TestData{
+				ID: "51515151",
+			},
+			expectedID:  "51515151",
+			expectedLen: 8,
+		},
+		{
+			name: "with ID, specifying id",
+			input: TestData{
+				ID: "7878787878",
+			},
+			expectedID:  "7878787878",
+			expectedLen: 10,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := SetID(&tc.input)
+			if err != nil {
+				if !tc.expectErrMsg {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+
+			if tc.input.ID == "" {
+				t.Fatal("expected ID to be set")
+			}
+
+			if tc.expectedID != "" && tc.input.ID != tc.expectedID {
+				t.Fatalf("expected ID to be %q, but got %q", tc.expectedID, tc.input.ID)
+			}
+
+			if len(tc.input.ID) != tc.expectedLen {
+				t.Fatalf("expected ID length to be %d, but got %d", tc.expectedLen, len(tc.input.ID))
+			}
+		})
+	}
+}
