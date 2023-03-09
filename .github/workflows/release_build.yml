@@ -27,16 +27,12 @@ jobs:
           go-version: 1.19
           cache: true
 
-      - name: install cosign
-        uses: sigstore/cosign-installer@main
-
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v2
         with:
-          args: release --rm-dist
+          args: release --clean
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COSIGN_EXPERIMENTAL: 1
           # Create a token, comment above, and uncomment bellow if need to
           # publish to an external repo (e.g.: Homebrew).
           # GITHUB_TOKEN: ${{ secrets.GO_RELEASER_GITHUB_TOKEN }}
