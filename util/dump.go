@@ -35,6 +35,10 @@ func Dump(v any) error {
 		return err
 	}
 
+	if err := SetID(v); err != nil {
+		return err
+	}
+
 	return validation.ValidateStruct(v)
 }
 
