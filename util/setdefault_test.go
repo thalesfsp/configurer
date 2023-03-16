@@ -255,7 +255,6 @@ func testTimeDefaults(t *testing.T) {
 		T3 time.Time `default:"2023/03/20"` // Should not replace.
 	}
 
-	nowYear := time.Now().Year()
 	expectedDate := time.Date(2023, 0o3, 20, 0, 0, 0, 0, time.UTC)
 
 	r := TestData{
@@ -270,7 +269,7 @@ func testTimeDefaults(t *testing.T) {
 		t.Fatal("expected T1 to be 2023")
 	}
 
-	if r.T2.Year() != nowYear {
+	if nowYear := time.Now().Year(); r.T2.Year() != nowYear {
 		t.Fatalf("expected T2 to be %d", nowYear)
 	}
 
