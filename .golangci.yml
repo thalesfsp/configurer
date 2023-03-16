@@ -24,7 +24,6 @@ linters:
     - goerr113
     - varnamelen
     - ireturn
-    - dupword
     - exhaustive
   fast: false
 

@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Backup strategy. When one provider fail, fallback to another.
 
-## [1.1.21] - 2023-03-16
+## [1.1.22] - 2023-03-16
 ### Added
 - Added the ability to set default values for time.Time.
   
