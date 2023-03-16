@@ -256,7 +256,7 @@ func testTimeDefaults(t *testing.T) {
 	}
 
 	nowYear := time.Now().Year()
-	expectedDate := time.Date(2023, 03, 20, 0, 0, 0, 0, time.UTC)
+	expectedDate := time.Date(2023, 0o3, 20, 0, 0, 0, 0, time.UTC)
 
 	r := TestData{
 		T3: expectedDate,

@@ -82,7 +82,6 @@ func SetDefault(v any) error {
 		}
 
 		switch fieldKind {
-
 		// Check if it's a string.
 		case reflect.String:
 			if field.String() == "" {
@@ -234,16 +233,19 @@ func setTimeValue(field reflect.Value, tag string) {
 
 func isInt(s string) bool {
 	_, err := strconv.Atoi(s)
+
 	return err == nil
 }
 
 func isFloat64(s string) bool {
 	_, err := strconv.ParseFloat(s, 64)
+
 	return err == nil
 }
 
 func isBool(s string) bool {
 	_, err := strconv.ParseBool(s)
+
 	return err == nil
 }
 
@@ -252,6 +254,7 @@ func intSlice(strings []string) reflect.Value {
 	for i, v := range strings {
 		ints[i], _ = strconv.Atoi(v)
 	}
+
 	return reflect.ValueOf(ints)
 }
 
@@ -260,6 +263,7 @@ func float64Slice(strings []string) reflect.Value {
 	for i, v := range strings {
 		float64s[i], _ = strconv.ParseFloat(v, 64)
 	}
+
 	return reflect.ValueOf(float64s)
 }
 
@@ -268,37 +272,46 @@ func boolSlice(strings []string) reflect.Value {
 	for i, v := range strings {
 		bools[i], _ = strconv.ParseBool(v)
 	}
+
 	return reflect.ValueOf(bools)
 }
 
 func isTime(value string) bool {
 	_, err := dateparse.ParseLocal(value)
+
 	return err == nil
 }
 
 func isDuration(value string) bool {
 	_, err := time.ParseDuration(value)
+
 	return err == nil
 }
 
 func timeSlice(values []string) reflect.Value {
 	var times []time.Time
+
 	for _, v := range values {
 		parsedTime, err := dateparse.ParseLocal(v)
+
 		if err == nil {
 			times = append(times, parsedTime)
 		}
 	}
+
 	return reflect.ValueOf(times)
 }
 
 func durationSlice(values []string) reflect.Value {
 	var durations []time.Duration
+
 	for _, v := range values {
 		parsedDuration, err := time.ParseDuration(v)
+
 		if err == nil {
 			durations = append(durations, parsedDuration)
 		}
 	}
+
 	return reflect.ValueOf(durations)
 }
