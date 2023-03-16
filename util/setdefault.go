@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/araddon/dateparse"
 	"github.com/thalesfsp/customerror"
 )
 
@@ -16,6 +17,7 @@ import (
 func SetDefault(v any) error {
 	tagName := "default"
 
+	// Do nothing if `v` is nil.
 	if v == nil {
 		return nil
 	}
@@ -34,13 +36,28 @@ func SetDefault(v any) error {
 	for i := 0; i < valNumFields; i++ {
 		field := val.Field(i)
 		fieldKind := field.Kind()
+		fieldType := field.Type()
+
+		// Check if the field is nil and can be set.
+		if field.Kind() == reflect.Ptr && field.IsNil() && field.CanSet() {
+			// Set the field to its zero value.
+			field.Set(reflect.New(fieldType.Elem()))
+
+			// Recurse using an interface of the field.
+			if err := SetDefault(field.Interface()); err != nil {
+				return err
+			}
+		}
+
+		// Get the field tag value.
+		typeField := val.Type().Field(i)
+		tag := typeField.Tag.Get(tagName)
 
 		// Check if it's a pointer to a struct.
 		if fieldKind == reflect.Ptr && field.Elem().Kind() == reflect.Struct {
 			if field.CanInterface() {
 				// Recurse using an interface of the field.
-				err := SetDefault(field.Interface())
-				if err != nil {
+				if err := SetDefault(field.Interface()); err != nil {
 					return err
 				}
 			}
@@ -53,237 +70,235 @@ func SetDefault(v any) error {
 		if fieldKind == reflect.Struct {
 			if field.CanAddr() && field.Addr().CanInterface() {
 				// Recurse using an interface of the pointer value of the field.
-				err := SetDefault(field.Addr().Interface())
-				if err != nil {
+				if err := SetDefault(field.Addr().Interface()); err != nil {
 					return err
 				}
-			}
 
-			// Move onto the next field.
-			continue
-		}
-
-		//////
-		// Start setting values here.
-		//////
-
-		// Check if it's a string or a pointer to a string.
-		if fieldKind == reflect.String || (fieldKind == reflect.Ptr && field.Elem().Kind() == reflect.String) {
-			typeField := val.Type().Field(i)
-
-			// Get the field tag value.
-			tag := typeField.Tag.Get(tagName)
-
-			// Skip if tag is not defined or ignored.
-			if tag == "" || tag == "-" {
-				continue
-			}
-
-			// Set the string value to the sanitized string if it's allowed.
-			// It should always be allowed at this point.
-			if field.CanSet() {
-				// Only set if the field is empty.
-				if fieldKind == reflect.String && field.String() == "" {
-					field.SetString(tag)
+				// Check if it's a time.Time.
+				if fieldType == reflect.TypeOf(time.Time{}) {
+					setTimeValue(field, tag)
 				}
 			}
-
-			continue
 		}
 
-		// Check if it's a bool or a pointer to a bool.
-		if fieldKind == reflect.Bool || (fieldKind == reflect.Ptr && field.Elem().Kind() == reflect.Bool) {
-			typeField := val.Type().Field(i)
+		switch fieldKind {
 
-			// Get the field tag value.
-			tag := typeField.Tag.Get(tagName)
-
-			// Skip if tag is not defined or ignored.
-			if tag == "" || tag == "-" {
-				continue
+		// Check if it's a string.
+		case reflect.String:
+			if field.String() == "" {
+				setStringValue(field, tag)
 			}
 
-			// Set the bool value to the sanitized bool if it's allowed.
-			// It should always be allowed at this point.
-			if field.CanSet() {
-				// Only set if the field is empty.
-				if fieldKind == reflect.Bool && !field.Bool() {
-					field.SetBool(tag == "true")
-				}
+		// Check if it's a bool.
+		case reflect.Bool:
+			if !field.Bool() {
+				setBoolValue(field, tag)
 			}
 
-			continue
-		}
-
-		// Check if it's an int or a pointer to an int.
-		if fieldKind == reflect.Int || (fieldKind == reflect.Ptr && field.Elem().Kind() == reflect.Int) {
-			typeField := val.Type().Field(i)
-
-			// Get the field tag value.
-			tag := typeField.Tag.Get(tagName)
-
-			// Skip if tag is not defined or ignored.
-			if tag == "" || tag == "-" {
-				continue
+		// Check if it's an int.
+		case reflect.Int:
+			if field.Int() == 0 {
+				setIntValue(field, tag)
 			}
 
-			// Set the int value to the sanitized int if it's allowed.
-			// It should always be allowed at this point.
-			if field.CanSet() {
-				// Only set if the field is empty.
-				if fieldKind == reflect.Int && field.Int() == 0 {
-					if asInt, err := strconv.Atoi(tag); err == nil {
-						field.SetInt(int64(asInt))
-					}
-				}
+		// Check if it's a float64.
+		case reflect.Float64:
+			if field.Float() == 0 {
+				setFloat64Value(field, tag)
 			}
 
-			continue
-		}
-
-		// Check if it's a float64 or a pointer to a float64.
-		if fieldKind == reflect.Float64 || (fieldKind == reflect.Ptr && field.Elem().Kind() == reflect.Float64) {
-			typeField := val.Type().Field(i)
-
-			// Get the field tag value.
-			tag := typeField.Tag.Get(tagName)
-
-			// Skip if tag is not defined or ignored.
-			if tag == "" || tag == "-" {
-				continue
+		// Check if it's a time.Duration.
+		case reflect.Int64:
+			if fieldType == reflect.TypeOf(time.Duration(0)) {
+				setDurationValue(field, tag)
 			}
 
-			// Set the float64 value to the sanitized float64 if it's allowed.
-			// It should always be allowed at this point.
-			if field.CanSet() {
-				// Only set if the field is empty.
-				if fieldKind == reflect.Float64 && field.Float() == 0 {
-					if asFloat, err := strconv.ParseFloat(tag, 64); err == nil {
-						field.SetFloat(asFloat)
-					}
-				}
+		// Check if it's a slice.
+		case reflect.Slice:
+			if field.IsNil() {
+				setSliceValue(field, tag)
 			}
 
-			continue
-		}
-
-		// Check if it's a duration or a pointer to a duration.
-		if fieldKind == reflect.Int64 || (fieldKind == reflect.Ptr && field.Elem().Kind() == reflect.Int64) {
-			typeField := val.Type().Field(i)
-
-			// Get the field tag value.
-			tag := typeField.Tag.Get(tagName)
-
-			// Skip if tag is not defined or ignored.
-			if tag == "" || tag == "-" {
-				continue
+		// Check if it's a map.
+		case reflect.Map:
+			if field.IsNil() {
+				setMapValue(field, tag)
 			}
-
-			// Set the duration value to the sanitized duration if it's allowed.
-			// It should always be allowed at this point.
-			if field.CanSet() {
-				// Only set if the field is empty.
-				if fieldKind == reflect.Int64 {
-					if asDuration, err := time.ParseDuration(tag); err == nil {
-						field.SetInt(int64(asDuration))
-					}
-				}
-			}
-
-			continue
-		}
-
-		// Check if it's a slice or a pointer to a slice.
-		if fieldKind == reflect.Slice || (fieldKind == reflect.Ptr && field.Elem().Kind() == reflect.Slice) {
-			typeField := val.Type().Field(i)
-
-			// Get the field tag value.
-			tag := typeField.Tag.Get(tagName)
-
-			// Skip if tag is not defined or ignored.
-			if tag == "" || tag == "-" {
-				continue
-			}
-
-			// Set the slice value to the sanitized slice if it's allowed.
-			// It should always be allowed at this point.
-			if field.CanSet() {
-				// Only set if the field is empty.
-				if fieldKind == reflect.Slice {
-					valuesAsString := strings.Split(tag, ",")
-					valueAsString := valuesAsString[0]
-
-					if _, err := strconv.Atoi(valueAsString); err == nil {
-						// If valueAsString is a int, then we can assume that the slice is a slice of ints.
-						// Iterate over valuesAsString and convert them to ints.
-						var ints []int
-
-						for _, v := range valuesAsString {
-							if asInt, err := strconv.Atoi(v); err == nil {
-								ints = append(ints, asInt)
-							}
-						}
-
-						field.Set(reflect.ValueOf(ints))
-					} else if _, err := strconv.ParseFloat(valueAsString, 64); err == nil {
-						// If valueAsString is a float64, then we can assume that the slice is a slice of float64s.
-						// Iterate over valuesAsString and convert them to float64s.
-						var float64s []float64
-
-						for _, v := range valuesAsString {
-							if asFloat, err := strconv.ParseFloat(v, 64); err == nil {
-								float64s = append(float64s, asFloat)
-							}
-						}
-
-						field.Set(reflect.ValueOf(float64s))
-					} else if _, err := strconv.ParseBool(valueAsString); err == nil {
-						// If valueAsString is a bool, then we can assume that the slice is a slice of bools.
-						// Iterate over valuesAsString and convert them to bools.
-						var bools []bool
-
-						for _, v := range valuesAsString {
-							if asBool, err := strconv.ParseBool(v); err == nil {
-								bools = append(bools, asBool)
-							}
-						}
-
-						field.Set(reflect.ValueOf(bools))
-					} else {
-						field.Set(reflect.ValueOf(valuesAsString))
-					}
-				}
-			}
-
-			continue
-		}
-
-		// Check if it's a map or a pointer to a map.
-		if fieldKind == reflect.Map || (fieldKind == reflect.Ptr && field.Elem().Kind() == reflect.Map) {
-			typeField := val.Type().Field(i)
-
-			// Get the field tag value.
-			tag := typeField.Tag.Get(tagName)
-
-			// Skip if tag is not defined or ignored.
-			if tag == "" || tag == "-" {
-				continue
-			}
-
-			// Set the map value to the sanitized map if it's allowed.
-			// It should always be allowed at this point.
-			if field.CanSet() {
-				// Only set if the field is empty.
-				if fieldKind == reflect.Map {
-					if asMap := parseMap(tag); asMap != nil {
-						field.Set(reflect.ValueOf(asMap))
-					}
-				}
-			}
-
-			continue
 		}
 	}
 
 	return nil
+}
+
+func setStringValue(field reflect.Value, tag string) {
+	if field.CanSet() {
+		if tag == "" || tag == "-" {
+			field.SetString("")
+		} else {
+			field.SetString(tag)
+		}
+	}
+}
+
+func setBoolValue(field reflect.Value, tag string) {
+	if field.CanSet() {
+		if tag == "" || tag == "-" {
+			field.SetBool(false)
+		} else {
+			field.SetBool(tag == "true")
+		}
+	}
+}
+
+func setIntValue(field reflect.Value, tag string) {
+	if field.CanSet() {
+		if tag == "" || tag == "-" {
+			field.SetInt(0)
+		} else if asInt, err := strconv.Atoi(tag); err == nil {
+			field.SetInt(int64(asInt))
+		}
+	}
+}
+
+func setFloat64Value(field reflect.Value, tag string) {
+	if field.CanSet() {
+		if tag == "" || tag == "-" {
+			field.SetFloat(0)
+		} else if asFloat, err := strconv.ParseFloat(tag, 64); err == nil {
+			field.SetFloat(asFloat)
+		}
+	}
+}
+
+func setDurationValue(field reflect.Value, tag string) {
+	if field.CanSet() {
+		if tag == "" || tag == "-" {
+			field.SetInt(0)
+		} else if asDuration, err := time.ParseDuration(tag); err == nil {
+			field.SetInt(int64(asDuration))
+		}
+	}
+}
+
+func setSliceValue(field reflect.Value, tag string) {
+	if field.CanSet() {
+		if tag == "" || tag == "-" {
+			field.Set(reflect.MakeSlice(field.Type(), 0, 0))
+		} else {
+			values := strings.Split(tag, ",")
+			value := values[0]
+
+			switch {
+			case isInt(value):
+				field.Set(intSlice(values))
+			case isFloat64(value):
+				field.Set(float64Slice(values))
+			case isBool(value):
+				field.Set(boolSlice(values))
+			case isTime(value):
+				field.Set(timeSlice(values))
+			case isDuration(value):
+				field.Set(durationSlice(values))
+			default:
+				field.Set(reflect.ValueOf(values))
+			}
+		}
+	}
+}
+
+func setMapValue(field reflect.Value, tag string) {
+	if field.CanSet() {
+		if tag == "" || tag == "-" {
+			field.Set(reflect.MakeMap(field.Type()))
+		} else if asMap := parseMap(tag); asMap != nil {
+			field.Set(reflect.ValueOf(asMap))
+		}
+	}
+}
+
+func setTimeValue(field reflect.Value, tag string) {
+	if field.CanSet() {
+		if tag == "" || tag == "-" {
+			field.Set(reflect.ValueOf(time.Now()))
+		} else {
+			// Normal parse.  Equivalent Timezone rules as time.Parse()
+			t, err := dateparse.ParseAny(tag)
+			if err != nil {
+				panic(err)
+			}
+
+			field.Set(reflect.ValueOf(t))
+		}
+	}
+}
+
+func isInt(s string) bool {
+	_, err := strconv.Atoi(s)
+	return err == nil
+}
+
+func isFloat64(s string) bool {
+	_, err := strconv.ParseFloat(s, 64)
+	return err == nil
+}
+
+func isBool(s string) bool {
+	_, err := strconv.ParseBool(s)
+	return err == nil
+}
+
+func intSlice(strings []string) reflect.Value {
+	ints := make([]int, len(strings))
+	for i, v := range strings {
+		ints[i], _ = strconv.Atoi(v)
+	}
+	return reflect.ValueOf(ints)
+}
+
+func float64Slice(strings []string) reflect.Value {
+	float64s := make([]float64, len(strings))
+	for i, v := range strings {
+		float64s[i], _ = strconv.ParseFloat(v, 64)
+	}
+	return reflect.ValueOf(float64s)
+}
+
+func boolSlice(strings []string) reflect.Value {
+	bools := make([]bool, len(strings))
+	for i, v := range strings {
+		bools[i], _ = strconv.ParseBool(v)
+	}
+	return reflect.ValueOf(bools)
+}
+
+func isTime(value string) bool {
+	_, err := dateparse.ParseLocal(value)
+	return err == nil
+}
+
+func isDuration(value string) bool {
+	_, err := time.ParseDuration(value)
+	return err == nil
+}
+
+func timeSlice(values []string) reflect.Value {
+	var times []time.Time
+	for _, v := range values {
+		parsedTime, err := dateparse.ParseLocal(v)
+		if err == nil {
+			times = append(times, parsedTime)
+		}
+	}
+	return reflect.ValueOf(times)
+}
+
+func durationSlice(values []string) reflect.Value {
+	var durations []time.Duration
+	for _, v := range values {
+		parsedDuration, err := time.ParseDuration(v)
+		if err == nil {
+			durations = append(durations, parsedDuration)
+		}
+	}
+	return reflect.ValueOf(durations)
 }

@@ -4,7 +4,9 @@ package util
 import (
 	"strconv"
 	"strings"
+	"time"
 
+	"github.com/araddon/dateparse"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 	"github.com/thalesfsp/configurer/internal/validation"
@@ -14,7 +16,6 @@ import (
 // Helpers.
 //////
 
-// Parse map.
 func parseMap(s string) map[string]interface{} {
 	if s == "" {
 		return nil
@@ -38,6 +39,10 @@ func parseMap(s string) map[string]interface{} {
 				m[key] = asInt
 			} else if asFloat, err := strconv.ParseFloat(value, 64); err == nil {
 				m[key] = asFloat
+			} else if asTime, err := dateparse.ParseLocal(value); err == nil {
+				m[key] = asTime
+			} else if asDuration, err := time.ParseDuration(value); err == nil {
+				m[key] = asDuration
 			} else {
 				m[key] = value
 			}
