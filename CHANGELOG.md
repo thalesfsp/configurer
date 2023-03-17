@@ -9,12 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Backup strategy. When one provider fail, fallback to another.
 
+
+## [1.1.24] - 2023-03-16
+### Changed
+- Code improved, more consistent, better tests, and better coverage.
+
 ## [1.1.23] - 2023-03-16
 ### Added
 - Added the ability to set default values for time.Time.
   
 ### Changed
-- Improved tests, coverage, and broke down all tests into smaller ones.
+- SetDefault: Improved tests, coverage, and broke down all tests into smaller ones.
 
 ## [1.1.19] - 2023-03-08
 ### Added

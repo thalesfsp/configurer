@@ -4,6 +4,8 @@ import (
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSetDefaults(t *testing.T) {
@@ -164,6 +166,7 @@ func testSliceDefaults(t *testing.T) {
 		T4 []bool          `default:"true,false,true"`
 		T5 []time.Duration `default:"1s,2s,3s"`
 		T6 []time.Time     `default:"2018-01-01,2019-01-02,2020-01-03"`
+		T7 []string        `default:"[]"`
 	}
 
 	r := TestData{}
@@ -190,17 +193,28 @@ func testSliceDefaults(t *testing.T) {
 	if r.T6[0].Year() != 2018 || r.T6[1].Year() != 2019 || r.T6[2].Year() != 2020 {
 		t.Fatal("expected T6 to be [2018-01-01 2019-01-02 2020-01-03]")
 	}
+	if r.T7 == nil {
+		t.Fatal("expected T7 to be []")
+	}
 }
 
 func testMapDefaults(t *testing.T) {
 	type TestData struct {
-		T1 map[string]interface{} `default:"asd:qwe,dfg:1"`
-		T2 map[string]interface{} `default:"asd:qwe,dfg:text1"`
-		T3 map[string]interface{} `default:"asd:qwe,dfg:true"`
-		T4 map[string]interface{} `default:"asd:qwe,dfg:false"`
-		T5 map[string]interface{} `default:"asd:qwe,dfg:0.65"`
-		T6 map[string]interface{} `default:"asd:qwe,dfg:0"`
-		T7 map[string]interface{} `default:"asd:qwe,dfg:123"`
+		T1  map[string]interface{}   `default:"asd:qwe,dfg:1"`
+		T2  map[string]interface{}   `default:"asd:qwe,dfg:text1"`
+		T3  map[string]interface{}   `default:"asd:qwe,dfg:true"`
+		T4  map[string]interface{}   `default:"asd:qwe,dfg:false"`
+		T5  map[string]interface{}   `default:"asd:qwe,dfg:0.65"`
+		T6  map[string]interface{}   `default:"asd:qwe,dfg:0"`
+		T7  map[string]interface{}   `default:"asd:qwe,dfg:123"`
+		T8  map[string]string        `default:"asd:qwe,dfg:iu"`
+		T9  map[string]int           `default:"asd:123,dfg:456"`
+		T10 map[string]float64       `default:"asd:0.65,dfg:0.66"`
+		T11 map[string]bool          `default:"asd:true,dfg:false"`
+		T12 map[string]time.Duration `default:"asd:1s,dfg:2s"`
+		T13 map[string]time.Time     `default:"asd:2018-01-01,dfg:2019-01-02"`
+		T14 map[string]interface{}   `default:"[]"` // Should be empty map
+		T15 map[string]interface{}   `default:""`   // Should be empty map
 	}
 
 	r := TestData{}
@@ -209,7 +223,7 @@ func testMapDefaults(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if !reflect.DeepEqual(r.T1, map[string]interface{}{"asd": "qwe", "dfg": 1}) {
+	if r.T1["asd"] != "qwe" || r.T1["dfg"] != 1 {
 		t.Fatal("expected T1 to be {'asd': 'qwe', 'dfg': 1}")
 	}
 	if !reflect.DeepEqual(r.T2, map[string]interface{}{"asd": "qwe", "dfg": "text1"}) {
@@ -230,6 +244,20 @@ func testMapDefaults(t *testing.T) {
 	if !reflect.DeepEqual(r.T7, map[string]interface{}{"asd": "qwe", "dfg": 123}) {
 		t.Fatal("expected T7 to be {'asd': 'qwe', 'dfg': 123}")
 	}
+
+	assert.Equal(t, map[string]string{"asd": "qwe", "dfg": "iu"}, r.T8)
+	assert.Equal(t, map[string]int{"asd": 123, "dfg": 456}, r.T9)
+	assert.Equal(t, map[string]float64{"asd": 0.65, "dfg": 0.66}, r.T10)
+	assert.Equal(t, map[string]bool{"asd": true, "dfg": false}, r.T11)
+	assert.Equal(t, map[string]time.Duration{"asd": time.Second, "dfg": time.Second * 2}, r.T12)
+	assert.Equal(t, map[string]time.Time{
+		"asd": time.Date(2018, 1, 1, 0, 0, 0, 0, time.UTC),
+		"dfg": time.Date(2019, 1, 2, 0, 0, 0, 0, time.UTC),
+	},
+		r.T13,
+	)
+	assert.Equal(t, map[string]interface{}{}, r.T14)
+	assert.Equal(t, map[string]interface{}{}, r.T15)
 }
 
 func testDurationDefaults(t *testing.T) {

@@ -10,7 +10,7 @@ import (
 
 func TestDump(t *testing.T) {
 	t.Setenv("TestDump_T1", "text1")
-	t.Setenv("TestDump_T2", "false")
+	t.Setenv("TestDump_T2", "true")
 	t.Setenv("TestDump_T3", "1.13")
 	t.Setenv("TestDump_T4", "123")
 
@@ -33,7 +33,7 @@ func TestDump(t *testing.T) {
 
 	type TestData1 struct {
 		T1 string  `json:"T1" default:"text1" env:"TestDump_T1"`
-		T2 bool    `json:"T2" default:"true" env:"TestDump_T2"`
+		T2 bool    `json:"T2" default:"false" env:"TestDump_T2"`
 		T3 float64 `json:"T3" default:"0.64" env:"TestDump_T3"`
 		T4 int     `json:"T4" default:"1" env:"TestDump_T4"`
 
@@ -41,11 +41,6 @@ func TestDump(t *testing.T) {
 	}
 
 	r := TestData1{
-		T1: "text",
-		T2: false,
-		T3: 3.4,
-		T4: 9,
-
 		TestData2: &TestData2{
 			T5: "text",
 			T6: false,
@@ -66,9 +61,12 @@ func TestDump(t *testing.T) {
 	if r.T1 != "text1" {
 		t.Fatalf("expected T1 to be 'text1', got '%s'", r.T1)
 	}
-	if r.T2 != false {
+	if r.T2 != true {
 		t.Fatal("expected T2 to be true")
 	}
+
+	t.Log(r.T3)
+
 	if r.T3 != 1.13 {
 		t.Fatal("expected T3 to be 1.13")
 	}

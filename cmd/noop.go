@@ -15,7 +15,7 @@ var noopCmd = &cobra.Command{
 	Short:   "NoOp provider",
 	Use:     "noop",
 	Example: "  configurer l n -- env | grep PWD",
-	Long: `NoOp provider will load secrets from from the
+	Long: `NoOp provider will load secrets from the
 environment and them run the specified command.
 
 ## About the command to run
