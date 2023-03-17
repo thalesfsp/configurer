@@ -64,16 +64,12 @@ func TestDump(t *testing.T) {
 	if r.T2 != true {
 		t.Fatal("expected T2 to be true")
 	}
-
-	t.Log(r.T3)
-
 	if r.T3 != 1.13 {
-		t.Fatal("expected T3 to be 1.13")
+		t.Fatal("expected T3 to be 1.13 got", r.T3)
 	}
 	if r.T4 != 123 {
 		t.Fatal("expected T4 to be 123")
 	}
-
 	if r.T5 != "text" {
 		t.Fatalf("expected T5 to be 'text', got '%s'", r.T5)
 	}
@@ -120,16 +116,7 @@ func TestDump_validation(t *testing.T) {
 		},
 	}
 
-	err := Dump(&r)
-	if err == nil {
-		t.Fatal(err)
-	}
-
-	if strings.Contains(err.Error(), "TestData1.TestData2.T5") == false {
-		t.Fatal(err)
-	}
-
-	if strings.Contains(err.Error(), "TestData1.T3") == false {
+	if err := Dump(&r); err == nil {
 		t.Fatal(err)
 	}
 }

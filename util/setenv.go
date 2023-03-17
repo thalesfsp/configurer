@@ -11,7 +11,7 @@ import (
 // SetEnv For a given struct `v`, set values based on the struct field tags
 // (`env`) and the environment variables.
 //
-// NOTE: It will set the value of the field even if it's not empty.
+// WARN: It will set the value of the field even if it's not empty.
 func SetEnv(v any) error {
 	tagName := "env"
 
@@ -64,6 +64,11 @@ func SetEnv(v any) error {
 			continue
 		}
 
+		// If no value is retrieved from the env var, move onto the next field.
+		if os.Getenv(tag) == "" {
+			continue
+		}
+
 		// Check if it's a struct value.
 		if fieldKind == reflect.Struct {
 			if field.CanAddr() && field.Addr().CanInterface() {
@@ -82,45 +87,31 @@ func SetEnv(v any) error {
 		switch fieldKind {
 		// Check if it's a string.
 		case reflect.String:
-			if field.String() == "" {
-				setStringValue(field, tag, os.Getenv(tag))
-			}
+			setStringValue(field, tag, os.Getenv(tag))
 
 		// Check if it's a bool.
 		case reflect.Bool:
-			if !field.Bool() {
-				setBoolValue(field, tag, os.Getenv(tag))
-			}
+			setBoolValue(field, tag, os.Getenv(tag))
 
 		// Check if it's an int.
 		case reflect.Int:
-			if field.Int() == 0 {
-				setIntValue(field, tag, os.Getenv(tag))
-			}
+			setIntValue(field, tag, os.Getenv(tag))
 
 		// Check if it's a float64.
 		case reflect.Float64:
-			if field.Float() == 0 {
-				setFloat64Value(field, tag, os.Getenv(tag))
-			}
+			setFloat64Value(field, tag, os.Getenv(tag))
 
 		// Check if it's a time.Duration.
 		case reflect.Int64:
-			if fieldType == reflect.TypeOf(time.Duration(0)) {
-				setDurationValue(field, tag, os.Getenv(tag))
-			}
+			setDurationValue(field, tag, os.Getenv(tag))
 
 		// Check if it's a slice.
 		case reflect.Slice:
-			if field.IsNil() {
-				setSliceValue(field, tag, os.Getenv(tag))
-			}
+			setSliceValue(field, tag, os.Getenv(tag))
 
 		// Check if it's a map.
 		case reflect.Map:
-			if field.IsNil() {
-				setMapValue(field, tag, os.Getenv(tag))
-			}
+			setMapValue(field, tag, os.Getenv(tag))
 		}
 	}
 
