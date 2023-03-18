@@ -25,6 +25,7 @@ linters:
     - varnamelen
     - ireturn
     - exhaustive
+    - dupword
   fast: false
 
 # Settings for specific linters

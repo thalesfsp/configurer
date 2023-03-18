@@ -452,13 +452,13 @@ func TestProcess_MapStruct(t *testing.T) {
 
 func TestProcess_notExported(t *testing.T) {
 	type TestStruct2 struct {
-		field3 string `json:"-" customtag:"b"`
+		field3 string `customtag:"updatedC"`
 	}
 
 	type TestStruct struct {
-		field1 string `customtag:"a"`
+		field1 string `customtag:"updatedA"`
 
-		field2 *TestStruct2 `json:"-" customtag:"b" validate:"required,gte=0"`
+		field2 *TestStruct2 `json:"-" customtag:"updatedB" validate:"required,gte=0"`
 	}
 
 	ts := &TestStruct{
@@ -472,5 +472,11 @@ func TestProcess_notExported(t *testing.T) {
 		return nil
 	})
 
-	assert.Error(t, err)
+	assert.NoError(t, err)
+	assert.EqualValues(t, &TestStruct{
+		field1: "a",
+		field2: &TestStruct2{
+			field3: "b",
+		},
+	}, ts)
 }

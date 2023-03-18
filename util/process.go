@@ -32,21 +32,19 @@ func process(tagName string, s any, cb Func) error {
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
 
-		// Skip unexported fields
+		// Skip unexported fields like `json` tag.
 		if field.PkgPath != "" {
-			return customerror.NewFailedToError(
-				fmt.Sprintf(
-					"set value for `%s` of `%s` for `%s` tag, it's unexported",
-					field.Name,
-					t.Name(),
-					tagName,
-				),
-			)
+			continue
 		}
 
 		value := v.Field(i)
 
 		customtag := field.Tag.Get(tagName)
+
+		// Skip ignored fields like `json:"-"`.
+		if customtag == "-" {
+			continue
+		}
 
 		if customtag != "" {
 			cb(value, field, customtag) // Pass the value directly.

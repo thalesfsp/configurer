@@ -18,6 +18,9 @@ import (
 // field tags (`default`).
 //
 // NOTE: It only sets default values for fields that are not set.
+//
+// NOTE: Like the built-in `json` tag, it'll ignore the field if it isn't
+// exported, and if tag is set to `-`.
 func SetDefault(v any) error {
 	if err := process("default", v, func(v reflect.Value, field reflect.StructField, tag string) error {
 		if err := setValueFromTag(v, field, tag, tag, false); err != nil {
@@ -36,6 +39,9 @@ func SetDefault(v any) error {
 // (`env`) and the environment variables.
 //
 // WARN: It will set the value of the field even if it's not empty.
+//
+// NOTE: Like the built-in `json` tag, it'll ignore the field if it isn't
+// exported, and if tag is set to `-`.
 func SetEnv(v any) error {
 	if err := process("env", v, func(v reflect.Value, field reflect.StructField, tag string) error {
 		valueFromEnvVar := os.Getenv(tag)
@@ -62,6 +68,9 @@ func SetEnv(v any) error {
 // NOTE: Currently only UUID is supported.
 //
 // NOTE: It only sets default values for fields that are not set.
+//
+// NOTE: Like the built-in `json` tag, it'll ignore the field if it isn't
+// exported, and if tag is set to `-`.
 func SetID(v any) error {
 	if err := process("id", v, func(v reflect.Value, field reflect.StructField, tag string) error {
 		var finalID string
@@ -98,6 +107,9 @@ func SetID(v any) error {
 // NOTE: `v` must be a pointer to a struct.
 // NOTE: It only sets default values for fields that are not set.
 // NOTE: It'll set the value from env vars even if it's not empty (precedence).
+//
+// NOTE: Like the built-in `json` tag, it'll ignore the field if it isn't
+// exported, and if tag is set to `-`.
 func Dump(v any) error {
 	if err := SetDefault(v); err != nil {
 		return err
@@ -127,6 +139,9 @@ func Dump(v any) error {
 // NOTE: `v` must be a pointer to a struct.
 // NOTE: It only sets default values for fields that are not set.
 // NOTE: It'll set the value from env vars even if it's not empty (precedence).
+//
+// NOTE: Like the built-in `json` tag, it'll ignore the field if it isn't
+// exported, and if tag is set to `-`.
 func Process(v any) error {
 	return Dump(v)
 }
