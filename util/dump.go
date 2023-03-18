@@ -32,6 +32,31 @@ func SetDefault(v any) error {
 	return nil
 }
 
+// SetEnv For a given struct `v`, set values based on the struct field tags
+// (`env`) and the environment variables.
+//
+// WARN: It will set the value of the field even if it's not empty.
+func SetEnv(v any) error {
+	if err := Process("env", v, func(v reflect.Value, field reflect.StructField, tag string) error {
+		valueFromEnvVar := os.Getenv(tag)
+
+		// Should do nothing if the environment variable is not set.
+		if valueFromEnvVar == "" {
+			return nil
+		}
+
+		if err := setValueFromTag(v, field, tag, valueFromEnvVar); err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Dump the configuration from the environment variables into `v`. It:
 // - Set values from environment variables using the `env` field tag.
 // - Set default values using the `default` field tag.
@@ -46,23 +71,11 @@ func SetDefault(v any) error {
 // NOTE: It only sets default values for fields that are not set.
 // NOTE: It'll set the value from env vars even if it's not empty (precedence).
 func Dump(v any) error {
-	if err := Process("default", v, func(v reflect.Value, field reflect.StructField, tag string) error {
-		if err := setValueFromTag(v, field, tag, tag); err != nil {
-			return err
-		}
-
-		return nil
-	}); err != nil {
+	if err := SetDefault(v); err != nil {
 		return err
 	}
 
-	if err := Process("env", v, func(v reflect.Value, field reflect.StructField, tag string) error {
-		if err := setValueFromTag(v, field, tag, os.Getenv(tag)); err != nil {
-			return err
-		}
-
-		return nil
-	}); err != nil {
+	if err := SetEnv(v); err != nil {
 		return err
 	}
 

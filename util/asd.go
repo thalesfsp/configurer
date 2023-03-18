@@ -390,6 +390,7 @@ func setValueFromTag(v reflect.Value, field reflect.StructField, tag string, con
 		return errors.New("cannot set value")
 	}
 
+	// Should not set value if it's already set.
 	if !v.IsZero() {
 		return nil
 	}
