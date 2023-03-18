@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/araddon/dateparse"
+	"github.com/thalesfsp/customerror"
 )
 
 // Func is the callback function type.
@@ -21,7 +22,7 @@ func process(tagName string, s any, cb Func) error {
 	v := reflect.ValueOf(s)
 
 	if v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
-		return errors.New("`s` must be set, and be a pointer to a struct")
+		return customerror.NewInvalidError("`s`, it must be set, and be a pointer")
 	}
 
 	v = v.Elem()
@@ -30,6 +31,18 @@ func process(tagName string, s any, cb Func) error {
 
 	for i := 0; i < t.NumField(); i++ {
 		field := t.Field(i)
+
+		// Skip unexported fields
+		if field.PkgPath != "" {
+			return customerror.NewFailedToError(
+				fmt.Sprintf(
+					"set value for `%s` of `%s` for `%s` tag, it's unexported",
+					field.Name,
+					t.Name(),
+					tagName,
+				),
+			)
+		}
 
 		value := v.Field(i)
 

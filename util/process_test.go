@@ -449,3 +449,28 @@ func TestProcess_MapStruct(t *testing.T) {
 		Field16: make(map[string]interface{}),
 	}, ts)
 }
+
+func TestProcess_notExported(t *testing.T) {
+	type TestStruct2 struct {
+		field3 string `json:"-" customtag:"b"`
+	}
+
+	type TestStruct struct {
+		field1 string `customtag:"a"`
+
+		field2 *TestStruct2 `json:"-" customtag:"b" validate:"required,gte=0"`
+	}
+
+	ts := &TestStruct{
+		field1: "a",
+		field2: &TestStruct2{
+			field3: "b",
+		},
+	}
+
+	err := process("customtag", ts, func(v reflect.Value, field reflect.StructField, tag string) error {
+		return nil
+	})
+
+	assert.Error(t, err)
+}
