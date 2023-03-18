@@ -14,10 +14,10 @@ import (
 // Func is the callback function type.
 type Func func(v reflect.Value, field reflect.StructField, tag string) error
 
-// Process a struct and its fields. Use it to build your own custom tag handler.
+// process a struct and its fields. Use it to build your own custom tag handler.
 //
 //nolint:errcheck
-func Process(tagName string, s any, cb Func) error {
+func process(tagName string, s any, cb Func) error {
 	v := reflect.ValueOf(s)
 
 	if v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
@@ -42,11 +42,11 @@ func Process(tagName string, s any, cb Func) error {
 		if value.Kind() == reflect.Ptr && !value.IsNil() {
 			elem := value.Elem()
 
-			if err := Process(tagName, elem.Addr().Interface(), cb); err != nil {
+			if err := process(tagName, elem.Addr().Interface(), cb); err != nil {
 				return err
 			}
 		} else if value.Kind() == reflect.Struct {
-			if err := Process(tagName, value.Addr().Interface(), cb); err != nil {
+			if err := process(tagName, value.Addr().Interface(), cb); err != nil {
 				return err
 			}
 		}

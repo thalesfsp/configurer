@@ -19,7 +19,7 @@ import (
 //
 // NOTE: It only sets default values for fields that are not set.
 func SetDefault(v any) error {
-	if err := Process("default", v, func(v reflect.Value, field reflect.StructField, tag string) error {
+	if err := process("default", v, func(v reflect.Value, field reflect.StructField, tag string) error {
 		if err := setValueFromTag(v, field, tag, tag, false); err != nil {
 			return err
 		}
@@ -37,7 +37,7 @@ func SetDefault(v any) error {
 //
 // WARN: It will set the value of the field even if it's not empty.
 func SetEnv(v any) error {
-	if err := Process("env", v, func(v reflect.Value, field reflect.StructField, tag string) error {
+	if err := process("env", v, func(v reflect.Value, field reflect.StructField, tag string) error {
 		valueFromEnvVar := os.Getenv(tag)
 
 		// Should do nothing if the environment variable is not set.
@@ -63,7 +63,7 @@ func SetEnv(v any) error {
 //
 // NOTE: It only sets default values for fields that are not set.
 func SetID(v any) error {
-	if err := Process("id", v, func(v reflect.Value, field reflect.StructField, tag string) error {
+	if err := process("id", v, func(v reflect.Value, field reflect.StructField, tag string) error {
 		var finalID string
 
 		switch tag {
@@ -112,6 +112,23 @@ func Dump(v any) error {
 	}
 
 	return validation.ValidateStruct(v)
+}
+
+// Process `v`:
+// - Set default values using the `default` field tag.
+// - Set values from environment variables using the `env` field tag.
+// - Validating the values using the `validate` field tag.
+//
+// Order of operations:
+// 1. Set default values
+// 2. Set values from environment variables
+// 3. Validate values
+//
+// NOTE: `v` must be a pointer to a struct.
+// NOTE: It only sets default values for fields that are not set.
+// NOTE: It'll set the value from env vars even if it's not empty (precedence).
+func Process(v any) error {
+	return Dump(v)
 }
 
 // DumpToEnv dumps `finalValue` to a `.env` file.

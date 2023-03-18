@@ -42,7 +42,7 @@ func TestProcess_1(t *testing.T) {
 		},
 	}
 
-	err := Process("customtag", o, func(v reflect.Value, field reflect.StructField, tag string) error {
+	err := process("customtag", o, func(v reflect.Value, field reflect.StructField, tag string) error {
 		if v.Kind() == reflect.String {
 			v.SetString(tag)
 		}
@@ -73,7 +73,7 @@ func TestProcess_1(t *testing.T) {
 
 	a := &Outer{}
 
-	err1 := Process("customtag", a, func(v reflect.Value, field reflect.StructField, tag string) error {
+	err1 := process("customtag", a, func(v reflect.Value, field reflect.StructField, tag string) error {
 		if v.Kind() == reflect.String {
 			v.SetString(tag)
 		}
@@ -99,7 +99,7 @@ func TestProcess_1(t *testing.T) {
 	}, a)
 
 	b := Outer{}
-	err2 := Process("customtag", b, func(v reflect.Value, field reflect.StructField, tag string) error {
+	err2 := process("customtag", b, func(v reflect.Value, field reflect.StructField, tag string) error {
 		if v.Kind() == reflect.String {
 			v.SetString(tag)
 		}
@@ -136,7 +136,7 @@ func TestProcess_2(t *testing.T) {
 			},
 		}
 
-		err := Process("customtag", o, func(v reflect.Value, field reflect.StructField, tag string) error {
+		err := process("customtag", o, func(v reflect.Value, field reflect.StructField, tag string) error {
 			if v.Kind() == reflect.String {
 				v.SetString(tag)
 			}
@@ -172,7 +172,7 @@ func TestProcess_2(t *testing.T) {
 
 	t.Run("nil pointer", func(t *testing.T) {
 		var o *Outer
-		err := Process("customtag", &o, func(v reflect.Value, field reflect.StructField, tag string) error {
+		err := process("customtag", &o, func(v reflect.Value, field reflect.StructField, tag string) error {
 			if v.Kind() == reflect.String {
 				v.SetString(tag)
 			}
@@ -187,7 +187,7 @@ func TestProcess_2(t *testing.T) {
 	t.Run("nil pointer in struct", func(t *testing.T) {
 		o := &Outer{}
 
-		err := Process("customtag", o, func(v reflect.Value, field reflect.StructField, tag string) error {
+		err := process("customtag", o, func(v reflect.Value, field reflect.StructField, tag string) error {
 			if v.Kind() == reflect.String {
 				v.SetString(tag)
 			}
@@ -224,7 +224,7 @@ func TestProcess_2(t *testing.T) {
 			Field3: "value3",
 		}
 
-		err := Process("customtag", o, func(v reflect.Value, field reflect.StructField, tag string) error {
+		err := process("customtag", o, func(v reflect.Value, field reflect.StructField, tag string) error {
 			if v.Kind() == reflect.String {
 				v.SetString(tag)
 			}
@@ -245,7 +245,7 @@ func TestProcess_2(t *testing.T) {
 	t.Run("empty struct", func(t *testing.T) {
 		o := &Outer{}
 
-		err := Process("customtag", o, func(v reflect.Value, field reflect.StructField, tag string) error {
+		err := process("customtag", o, func(v reflect.Value, field reflect.StructField, tag string) error {
 			if v.Kind() == reflect.String {
 				v.SetString(tag)
 			}
@@ -277,7 +277,7 @@ func TestProcess_2(t *testing.T) {
 func TestProcess_3(t *testing.T) {
 	o := &Outer{}
 
-	err := Process("customtag", o, func(v reflect.Value, field reflect.StructField, tag string) error {
+	err := process("customtag", o, func(v reflect.Value, field reflect.StructField, tag string) error {
 		if err := setValueFromTag(v, field, tag, tag, false); err != nil {
 			return err
 		}
@@ -297,7 +297,7 @@ type timeDurationStruct struct {
 
 func TestProcess_TimeDurationStruct(t *testing.T) {
 	tds := &timeDurationStruct{}
-	err := Process("customtag", tds, func(v reflect.Value, field reflect.StructField, tag string) error {
+	err := process("customtag", tds, func(v reflect.Value, field reflect.StructField, tag string) error {
 		if err := setValueFromTag(v, field, tag, tag, false); err != nil {
 			return err
 		}
@@ -319,7 +319,7 @@ func TestProcess_PrimitivesStruct(t *testing.T) {
 
 	ts := &TestStruct{}
 
-	err := Process("customtag", ts, func(v reflect.Value, field reflect.StructField, tag string) error {
+	err := process("customtag", ts, func(v reflect.Value, field reflect.StructField, tag string) error {
 		if err := setValueFromTag(v, field, tag, tag, false); err != nil {
 			return err
 		}
@@ -366,7 +366,7 @@ func TestProcess_SliceStruct(t *testing.T) {
 
 	ts := &TestStruct{}
 
-	err := Process("customtag", ts, func(v reflect.Value, field reflect.StructField, tag string) error {
+	err := process("customtag", ts, func(v reflect.Value, field reflect.StructField, tag string) error {
 		if err := setValueFromTag(v, field, tag, tag, false); err != nil {
 			return err
 		}
@@ -418,7 +418,7 @@ func TestProcess_MapStruct(t *testing.T) {
 
 	ts := &TestStruct{}
 
-	err := Process("customtag", ts, func(v reflect.Value, field reflect.StructField, tag string) error {
+	err := process("customtag", ts, func(v reflect.Value, field reflect.StructField, tag string) error {
 		if err := setValueFromTag(v, field, tag, tag, false); err != nil {
 			return err
 		}
