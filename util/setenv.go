@@ -49,6 +49,12 @@ func SetEnv(v any) error {
 
 		// Get the field tag value.
 		typeField := val.Type().Field(i)
+
+		// Check if tag is present
+		if _, ok := typeField.Tag.Lookup(tagName); !ok {
+			continue
+		}
+
 		tag := typeField.Tag.Get(tagName)
 
 		// Check if it's a pointer to a struct.

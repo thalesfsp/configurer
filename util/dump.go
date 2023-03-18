@@ -3,6 +3,7 @@ package util
 import (
 	"encoding/json"
 	"os"
+	"reflect"
 
 	"github.com/thalesfsp/configurer/internal/validation"
 	"github.com/thalesfsp/customerror"
@@ -27,13 +28,29 @@ import (
 // NOTE: It only sets default values for fields that are not set.
 // NOTE: It'll set the value from env vars even if it's not empty (precedence).
 func Dump(v any) error {
-	if err := SetDefault(v); err != nil {
+	if err := Process("default", v, func(v reflect.Value, field reflect.StructField, tag string) error {
+		if err := setValueFromTag(v, field, tag, tag); err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
 		return err
 	}
 
-	if err := SetEnv(v); err != nil {
+	if err := Process("env", v, func(v reflect.Value, field reflect.StructField, tag string) error {
+		if err := setValueFromTag(v, field, tag, os.Getenv(tag)); err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
 		return err
 	}
+
+	// if err := SetEnv(v); err != nil {
+	// 	return err
+	// }
 
 	if err := SetID(v); err != nil {
 		return err
