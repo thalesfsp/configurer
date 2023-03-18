@@ -15,6 +15,8 @@ import (
 type Func func(v reflect.Value, field reflect.StructField, tag string) error
 
 // Process a struct and its fields. Use it to build your own custom tag handler.
+//
+//nolint:errcheck
 func Process(tagName string, s any, cb Func) error {
 	v := reflect.ValueOf(s)
 
@@ -227,13 +229,13 @@ func parseMap(valueType reflect.Type, tag string) (interface{}, error) {
 
 		key, err := parseValue(valueType.Key(), kv[0])
 		if err != nil {
-			return nil, fmt.Errorf("failed to parse key %s: %v", kv[0], err)
+			return nil, fmt.Errorf("failed to parse key %s: %w", kv[0], err)
 		}
 
 		if valueType.Elem().Kind() == reflect.Interface {
 			value, err := parseValueForInterface(kv[1])
 			if err != nil {
-				return nil, fmt.Errorf("failed to parse value %s: %v", kv[1], err)
+				return nil, fmt.Errorf("failed to parse value %s: %w", kv[1], err)
 			}
 
 			// Convert the value to the correct type.
@@ -243,7 +245,7 @@ func parseMap(valueType reflect.Type, tag string) (interface{}, error) {
 		} else {
 			value, err := parseValue(valueType.Elem(), kv[1])
 			if err != nil {
-				return nil, fmt.Errorf("failed to parse value %s: %v", kv[1], err)
+				return nil, fmt.Errorf("failed to parse value %s: %w", kv[1], err)
 			}
 			mapValue.SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(value))
 		}
@@ -252,6 +254,7 @@ func parseMap(valueType reflect.Type, tag string) (interface{}, error) {
 	return mapValue.Interface(), nil
 }
 
+//nolint:unparam
 func parseValueForInterface(str string) (interface{}, error) {
 	if str != "0" {
 		// Check for time.Duration
@@ -329,6 +332,7 @@ func parseValue(t reflect.Type, str string) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		v = reflect.ValueOf(b)
 
 	case reflect.Float32, reflect.Float64:
@@ -336,6 +340,7 @@ func parseValue(t reflect.Type, str string) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		v = reflect.ValueOf(f).Convert(t)
 
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
@@ -344,12 +349,14 @@ func parseValue(t reflect.Type, str string) (interface{}, error) {
 			if err != nil {
 				return nil, err
 			}
+
 			v = reflect.ValueOf(d)
 		} else {
 			i, err := strconv.ParseInt(str, 10, 64)
 			if err != nil {
 				return nil, err
 			}
+
 			v = reflect.ValueOf(i).Convert(t)
 		}
 
@@ -358,6 +365,7 @@ func parseValue(t reflect.Type, str string) (interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		v = reflect.ValueOf(u).Convert(t)
 
 	case reflect.Struct:
@@ -366,6 +374,7 @@ func parseValue(t reflect.Type, str string) (interface{}, error) {
 			if err != nil {
 				return nil, err
 			}
+
 			v = reflect.ValueOf(value)
 		} else {
 			return nil, fmt.Errorf("unsupported struct type: %s", t)
@@ -381,6 +390,7 @@ func parseValue(t reflect.Type, str string) (interface{}, error) {
 	return v.Interface(), nil
 }
 
+//nolint:unparam
 func setValueFromTag(v reflect.Value, field reflect.StructField, tag string, content string, override bool) error {
 	if tag == "" {
 		return nil
@@ -419,6 +429,7 @@ func setValueFromTag(v reflect.Value, field reflect.StructField, tag string, con
 		if err != nil {
 			return err
 		}
+
 		v.Set(reflect.ValueOf(m))
 	case reflect.Struct:
 		if v.Type() == reflect.TypeOf(time.Time{}) {
