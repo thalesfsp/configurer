@@ -9,6 +9,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Backup strategy. When one provider fail, fallback to another.
 
+## [1.1.26] - 2023-03-16
+### Changed
+- The whole engine on how to handle custom tags.
+
 ## [1.1.25] - 2023-03-16
 ### Changed
 - Fixed tests.
