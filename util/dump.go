@@ -14,6 +14,24 @@ import (
 // Exported feature(s).
 //////
 
+// SetDefault For a given struct `v`, set default values based on the struct
+// field tags (`default`).
+//
+// NOTE: It only sets default values for fields that are not set.
+func SetDefault(v any) error {
+	if err := Process("default", v, func(v reflect.Value, field reflect.StructField, tag string) error {
+		if err := setValueFromTag(v, field, tag, tag); err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // Dump the configuration from the environment variables into `v`. It:
 // - Set values from environment variables using the `env` field tag.
 // - Set default values using the `default` field tag.
