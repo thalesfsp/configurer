@@ -278,7 +278,7 @@ func TestProcess_3(t *testing.T) {
 	o := &Outer{}
 
 	err := Process("customtag", o, func(v reflect.Value, field reflect.StructField, tag string) error {
-		if err := setValueFromTag(v, field, tag, tag); err != nil {
+		if err := setValueFromTag(v, field, tag, tag, false); err != nil {
 			return err
 		}
 
@@ -298,7 +298,7 @@ type timeDurationStruct struct {
 func TestProcess_TimeDurationStruct(t *testing.T) {
 	tds := &timeDurationStruct{}
 	err := Process("customtag", tds, func(v reflect.Value, field reflect.StructField, tag string) error {
-		if err := setValueFromTag(v, field, tag, tag); err != nil {
+		if err := setValueFromTag(v, field, tag, tag, false); err != nil {
 			return err
 		}
 
@@ -320,7 +320,7 @@ func TestProcess_PrimitivesStruct(t *testing.T) {
 	ts := &TestStruct{}
 
 	err := Process("customtag", ts, func(v reflect.Value, field reflect.StructField, tag string) error {
-		if err := setValueFromTag(v, field, tag, tag); err != nil {
+		if err := setValueFromTag(v, field, tag, tag, false); err != nil {
 			return err
 		}
 
@@ -367,7 +367,7 @@ func TestProcess_SliceStruct(t *testing.T) {
 	ts := &TestStruct{}
 
 	err := Process("customtag", ts, func(v reflect.Value, field reflect.StructField, tag string) error {
-		if err := setValueFromTag(v, field, tag, tag); err != nil {
+		if err := setValueFromTag(v, field, tag, tag, false); err != nil {
 			return err
 		}
 
@@ -419,7 +419,7 @@ func TestProcess_MapStruct(t *testing.T) {
 	ts := &TestStruct{}
 
 	err := Process("customtag", ts, func(v reflect.Value, field reflect.StructField, tag string) error {
-		if err := setValueFromTag(v, field, tag, tag); err != nil {
+		if err := setValueFromTag(v, field, tag, tag, false); err != nil {
 			return err
 		}
 

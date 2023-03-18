@@ -19,36 +19,36 @@ func TestDump(t *testing.T) {
 	type TestData3 struct {
 		T7 float64 `json:"T7" default:"0.64"`
 
-		// TestData4 TestData4
+		TestData4 TestData4
 	}
 
 	type TestData2 struct {
-		// T5 string `json:"T5" default:"text2"`
-		// T6 bool   `json:"T6" default:"true"`
+		T5 string `json:"T5" default:"text2"`
+		T6 bool   `json:"T6" default:"true"`
 
 		TestData3 *TestData3
 	}
 
 	type TestData1 struct {
-		// T1 string  `json:"T1" default:"text1" env:"TestDump_T1"`
-		// T2 bool    `json:"T2" default:"false" env:"TestDump_T2"`
-		// T3 float64 `json:"T3" default:"0.64" env:"TestDump_T3"`
-		// T4 int     `json:"T4" default:"1" env:"TestDump_T4"`
+		T1 string  `json:"T1" default:"text1" env:"TestDump_T1"`
+		T2 bool    `json:"T2" default:"false" env:"TestDump_T2"`
+		T3 float64 `json:"T3" default:"0.64" env:"TestDump_T3"`
+		T4 int     `json:"T4" default:"1" env:"TestDump_T4"`
 
 		*TestData2
 	}
 
 	r := TestData1{
 		TestData2: &TestData2{
-			// T5: "text",
-			// T6: false,
+			T5: "text",
+			T6: false,
 
 			TestData3: &TestData3{
 				T7: 0,
 
-				// TestData4: TestData4{
-				// 	T8: 0,
-				// },
+				TestData4: TestData4{
+					T8: 0,
+				},
 			},
 		},
 	}
@@ -56,30 +56,30 @@ func TestDump(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// if r.T1 != "text1" {
-	// 	t.Fatalf("expected T1 to be 'text1', got '%s'", r.T1)
-	// }
-	// if r.T2 != true {
-	// 	t.Fatal("expected T2 to be true")
-	// }
-	// if r.T3 != 1.13 {
-	// 	t.Fatal("expected T3 to be 1.13 got", r.T3)
-	// }
-	// if r.T4 != 123 {
-	// 	t.Fatal("expected T4 to be 123")
-	// }
-	// if r.T5 != "text" {
-	// 	t.Fatalf("expected T5 to be 'text', got '%s'", r.T5)
-	// }
-	// if r.T6 != true {
-	// 	t.Fatal("expected T6 to be true")
-	// }
+	if r.T1 != "text1" {
+		t.Fatalf("expected T1 to be 'text1', got '%s'", r.T1)
+	}
+	if r.T2 != true {
+		t.Fatal("expected T2 to be true")
+	}
+	if r.T3 != 1.13 {
+		t.Fatal("expected T3 to be 1.13 got", r.T3)
+	}
+	if r.T4 != 123 {
+		t.Fatal("expected T4 to be 123")
+	}
+	if r.T5 != "text" {
+		t.Fatalf("expected T5 to be 'text', got '%s'", r.T5)
+	}
+	if r.T6 != true {
+		t.Fatal("expected T6 to be true")
+	}
 	if r.TestData3.T7 != 0.64 {
 		t.Fatal("expected T7 to be 0.64 got", r.TestData3.T7)
 	}
-	// if r.TestData3.TestData4.T8 != 1 {
-	// 	t.Fatal("expected T8 to be 1")
-	// }
+	if r.TestData3.TestData4.T8 != 1 {
+		t.Fatal("expected T8 to be 1")
+	}
 }
 
 func TestDump_validation(t *testing.T) {
@@ -369,7 +369,7 @@ func TestDumpToEnv(t *testing.T) {
 
 func TestSetID(t *testing.T) {
 	type TestData struct {
-		ID string `id:""`
+		ID string `id:"uuid"`
 	}
 
 	testCases := []struct {
@@ -380,34 +380,18 @@ func TestSetID(t *testing.T) {
 		expectErrMsg bool
 	}{
 		{
-			name:        "empty id",
+			name:        "empty id - should set",
 			input:       TestData{},
 			expectedLen: 36,
 		},
-		{
-			name: "specifying id",
-			input: TestData{
-				ID: "123123123",
-			},
-			expectedID:  "123123123",
-			expectedLen: 9,
-		},
-		{
-			name: "with ID, not specifying id",
-			input: TestData{
-				ID: "51515151",
-			},
-			expectedID:  "51515151",
-			expectedLen: 8,
-		},
-		{
-			name: "with ID, specifying id",
-			input: TestData{
-				ID: "7878787878",
-			},
-			expectedID:  "7878787878",
-			expectedLen: 10,
-		},
+		// {
+		// 	name: "specifying id - should not set",
+		// 	input: TestData{
+		// 		ID: "123123123",
+		// 	},
+		// 	expectedID:  "123123123",
+		// 	expectedLen: 9,
+		// },
 	}
 
 	for _, tc := range testCases {

@@ -20,7 +20,7 @@ import (
 // NOTE: It only sets default values for fields that are not set.
 func SetDefault(v any) error {
 	if err := Process("default", v, func(v reflect.Value, field reflect.StructField, tag string) error {
-		if err := setValueFromTag(v, field, tag, tag); err != nil {
+		if err := setValueFromTag(v, field, tag, tag, false); err != nil {
 			return err
 		}
 
@@ -45,7 +45,35 @@ func SetEnv(v any) error {
 			return nil
 		}
 
-		if err := setValueFromTag(v, field, tag, valueFromEnvVar); err != nil {
+		if err := setValueFromTag(v, field, tag, valueFromEnvVar, true); err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// SetID For a given struct `v`, set field with the specified ID type.
+//
+// NOTE: Currently only UUID is supported.
+//
+// NOTE: It only sets default values for fields that are not set.
+func SetID(v any) error {
+	if err := Process("id", v, func(v reflect.Value, field reflect.StructField, tag string) error {
+		var finalID string
+
+		switch tag {
+		case "uuid":
+			finalID = GenerateUUID()
+		default:
+			return customerror.NewInvalidError("invalid ID type")
+		}
+
+		if err := setValueFromTag(v, field, tag, finalID, false); err != nil {
 			return err
 		}
 

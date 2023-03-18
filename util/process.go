@@ -14,6 +14,7 @@ import (
 // Func is the callback function type.
 type Func func(v reflect.Value, field reflect.StructField, tag string) error
 
+// Process a struct and its fields. Use it to build your own custom tag handler.
 func Process(tagName string, s any, cb Func) error {
 	v := reflect.ValueOf(s)
 
@@ -85,12 +86,14 @@ func parseUintValue(v reflect.Value, str string) error {
 		return nil
 	}
 
-	if u, err := strconv.ParseUint(str, 10, 64); err == nil {
-		v.SetUint(u)
-		return nil
-	} else {
+	u, err := strconv.ParseUint(str, 10, 64)
+	if err != nil {
 		return err
 	}
+
+	v.SetUint(u)
+
+	return nil
 }
 
 func parseFloatValue(v reflect.Value, str string) error {
@@ -102,12 +105,14 @@ func parseFloatValue(v reflect.Value, str string) error {
 		return nil
 	}
 
-	if f, err := strconv.ParseFloat(str, 64); err == nil {
-		v.SetFloat(f)
-		return nil
-	} else {
+	f, err := strconv.ParseFloat(str, 64)
+	if err != nil {
 		return err
 	}
+
+	v.SetFloat(f)
+
+	return nil
 }
 
 func parseBoolValue(v reflect.Value, str string) error {
@@ -119,12 +124,14 @@ func parseBoolValue(v reflect.Value, str string) error {
 		return nil
 	}
 
-	if b, err := strconv.ParseBool(str); err == nil {
-		v.SetBool(b)
-		return nil
-	} else {
+	b, err := strconv.ParseBool(str)
+	if err != nil {
 		return err
 	}
+
+	v.SetBool(b)
+
+	return nil
 }
 
 func parseStringValue(v reflect.Value, str string) {
@@ -192,11 +199,9 @@ func parseSingleValue(v reflect.Value, t reflect.Type, str string) error {
 	case reflect.Struct:
 		if t == reflect.TypeOf(time.Time{}) {
 			return parseTimeValue(v, str)
-		} else if t == reflect.TypeOf(time.Duration(0)) {
-			return parseDurationValue(v, str)
-		} else {
-			return fmt.Errorf("unsupported struct type: %s", t)
 		}
+
+		return fmt.Errorf("unsupported struct type: %s", t)
 	default:
 		return fmt.Errorf("unsupported type: %s", t)
 	}
@@ -226,7 +231,7 @@ func parseMap(valueType reflect.Type, tag string) (interface{}, error) {
 		}
 
 		if valueType.Elem().Kind() == reflect.Interface {
-			value, err := parseValueForInterface(valueType.Elem(), kv[1])
+			value, err := parseValueForInterface(kv[1])
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse value %s: %v", kv[1], err)
 			}
@@ -247,7 +252,7 @@ func parseMap(valueType reflect.Type, tag string) (interface{}, error) {
 	return mapValue.Interface(), nil
 }
 
-func parseValueForInterface(t reflect.Type, str string) (interface{}, error) {
+func parseValueForInterface(str string) (interface{}, error) {
 	if str != "0" {
 		// Check for time.Duration
 		if d, err := time.ParseDuration(str); err == nil {
@@ -376,7 +381,7 @@ func parseValue(t reflect.Type, str string) (interface{}, error) {
 	return v.Interface(), nil
 }
 
-func setValueFromTag(v reflect.Value, field reflect.StructField, tag string, content string) error {
+func setValueFromTag(v reflect.Value, field reflect.StructField, tag string, content string, override bool) error {
 	if tag == "" {
 		return nil
 	}
@@ -385,8 +390,8 @@ func setValueFromTag(v reflect.Value, field reflect.StructField, tag string, con
 		return errors.New("cannot set value")
 	}
 
-	// Should not set value if it's already set.
-	if !v.IsZero() {
+	// Should set the value if override is true or the value is zero.
+	if !override && !v.IsZero() {
 		return nil
 	}
 
