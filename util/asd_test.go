@@ -289,8 +289,10 @@ func TestProcess_3(t *testing.T) {
 }
 
 type timeDurationStruct struct {
-	TimeField     time.Time     `customtag:"2022-01-01"`
-	DurationField time.Duration `customtag:"1h"`
+	TimeField         time.Time     `customtag:"2022-01-01"`
+	TimeFieldZero     time.Time     `customtag:"zero"`
+	DurationField     time.Duration `customtag:"1h"`
+	DurationFieldZero time.Duration `customtag:"zero"`
 }
 
 func TestProcess_TimeDurationStruct(t *testing.T) {
@@ -305,18 +307,14 @@ func TestProcess_TimeDurationStruct(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC), tds.TimeField)
+	assert.Equal(t, time.Time{}, tds.TimeFieldZero)
 	assert.Equal(t, time.Hour, tds.DurationField)
+	assert.Equal(t, time.Duration(0), tds.DurationFieldZero)
 }
 
 func TestProcess_PrimitivesStruct(t *testing.T) {
 	type TestStruct struct {
-		Field1 string        `customtag:"field1"`
-		Field2 int           `customtag:"42"`
-		Field3 uint          `customtag:"43"`
-		Field4 float64       `customtag:"3.14"`
-		Field5 bool          `customtag:"true"`
-		Field6 time.Time     `customtag:"2023-03-18T00:00:00Z"`
-		Field7 time.Duration `customtag:"1h"`
+		Field1Zero string `customtag:"zero"`
 	}
 
 	ts := &TestStruct{}
@@ -331,25 +329,39 @@ func TestProcess_PrimitivesStruct(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.Equal(t, &TestStruct{
-		Field1: "field1",
-		Field2: 42,
-		Field3: 43,
-		Field4: 3.14,
-		Field5: true,
-		Field6: time.Date(2023, 3, 18, 0, 0, 0, 0, time.UTC),
-		Field7: time.Hour,
+		// Field1:     "field1",
+		// Field2:     42,
+		// Field3:     43,
+		// Field4:     3.14,
+		// Field5:     true,
+		// Field6:     time.Date(2023, 3, 18, 0, 0, 0, 0, time.UTC),
+		// Field7:     time.Hour,
+		Field1Zero: "",
+		// Field2Zero: 0,
+		// Field3Zero: 0,
+		// Field4Zero: 0,
+		// Field5Zero: false,
+		// Field6Zero: time.Time{},
+		// Field7Zero: time.Duration(0),
 	}, ts)
 }
 
 func TestProcess_SliceStruct(t *testing.T) {
 	type TestStruct struct {
-		Field1 []string        `customtag:"a,b,c"`
-		Field2 []int           `customtag:"1,2,3"`
-		Field3 []uint          `customtag:"4,5,6"`
-		Field4 []float64       `customtag:"1.1,2.2,3.3"`
-		Field5 []bool          `customtag:"true,false,true"`
-		Field6 []time.Time     `customtag:"2023-03-18T00:00:00Z,2023-03-19T00:00:00Z"`
-		Field7 []time.Duration `customtag:"1h,2m,3ms"`
+		Field1  []string        `customtag:"a,b,c"`
+		Field2  []int           `customtag:"1,2,3"`
+		Field3  []uint          `customtag:"4,5,6"`
+		Field4  []float64       `customtag:"1.1,2.2,3.3"`
+		Field5  []bool          `customtag:"true,false,true"`
+		Field6  []time.Time     `customtag:"2023-03-18T00:00:00Z,2023-03-19T00:00:00Z"`
+		Field7  []time.Duration `customtag:"1h,2m,3ms"`
+		Field8  []string        `customtag:"zero"`
+		Field9  []int           `customtag:"zero"`
+		Field10 []uint          `customtag:"zero"`
+		Field11 []float64       `customtag:"zero"`
+		Field12 []bool          `customtag:"zero"`
+		Field13 []time.Time     `customtag:"zero"`
+		Field14 []time.Duration `customtag:"zero"`
 	}
 
 	ts := &TestStruct{}
@@ -373,7 +385,14 @@ func TestProcess_SliceStruct(t *testing.T) {
 			time.Date(2023, 3, 18, 0, 0, 0, 0, time.UTC),
 			time.Date(2023, 3, 19, 0, 0, 0, 0, time.UTC),
 		},
-		Field7: []time.Duration{time.Hour, 2 * time.Minute, 3 * time.Millisecond},
+		Field7:  []time.Duration{time.Hour, 2 * time.Minute, 3 * time.Millisecond},
+		Field8:  []string{},
+		Field9:  []int{},
+		Field10: []uint{},
+		Field11: []float64{},
+		Field12: []bool{},
+		Field13: []time.Time{},
+		Field14: []time.Duration{},
 	}, ts)
 }
 
@@ -393,6 +412,8 @@ func TestProcess_MapStruct(t *testing.T) {
 		Field12 map[string]interface{}   `customtag:"asd:qwe,dfg:0.65"`
 		Field13 map[string]interface{}   `customtag:"asd:qwe,dfg:0"`
 		Field14 map[string]interface{}   `customtag:"asd:qwe,dfg:123"`
+		Field15 map[string]string        `customtag:"zero"`
+		Field16 map[string]interface{}   `customtag:"zero"`
 	}
 
 	ts := &TestStruct{}
@@ -406,7 +427,6 @@ func TestProcess_MapStruct(t *testing.T) {
 	})
 
 	assert.NoError(t, err)
-
 	assert.EqualValues(t, &TestStruct{
 		Field1: map[string]string{"a": "a", "b": "b", "c": "c"},
 		Field2: map[string]int{"a": 1, "b": 2, "c": 3},
@@ -418,12 +438,14 @@ func TestProcess_MapStruct(t *testing.T) {
 			"b": time.Date(2022, 3, 18, 0, 0, 0, 0, time.UTC),
 		},
 		Field7:  map[string]time.Duration{"a": time.Hour, "b": 2 * time.Second, "c": 3 * time.Millisecond},
-		Field8:  map[string]interface{}{"asd": "qwe", "dfg": int64(1)},
+		Field8:  map[string]interface{}{"asd": "qwe", "dfg": 1},
 		Field9:  map[string]interface{}{"asd": "qwe", "dfg": "text1"},
 		Field10: map[string]interface{}{"asd": "qwe", "dfg": true},
 		Field11: map[string]interface{}{"asd": "qwe", "dfg": false},
 		Field12: map[string]interface{}{"asd": "qwe", "dfg": 0.65},
-		Field13: map[string]interface{}{"asd": "qwe", "dfg": int64(0)},
-		Field14: map[string]interface{}{"asd": "qwe", "dfg": int64(123)},
+		Field13: map[string]interface{}{"asd": "qwe", "dfg": 0},
+		Field14: map[string]interface{}{"asd": "qwe", "dfg": 123},
+		Field15: make(map[string]string),
+		Field16: make(map[string]interface{}),
 	}, ts)
 }

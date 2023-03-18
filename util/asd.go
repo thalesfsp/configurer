@@ -63,6 +63,14 @@ func parseIntValue(v reflect.Value, str string) error {
 		return parseDurationValue(v, str)
 	}
 
+	if str == GetZeroControlChar() {
+		// If str is the "zero" control char, set the value to field's zero
+		// value.
+		v.Set(reflect.Zero(v.Type()))
+
+		return nil
+	}
+
 	i, err := strconv.ParseInt(str, 10, 64)
 	if err != nil {
 		return err
@@ -74,6 +82,14 @@ func parseIntValue(v reflect.Value, str string) error {
 }
 
 func parseUintValue(v reflect.Value, str string) error {
+	if str == GetZeroControlChar() {
+		// If str is the "zero" control char, set the value to field's zero
+		// value.
+		v.Set(reflect.Zero(v.Type()))
+
+		return nil
+	}
+
 	if u, err := strconv.ParseUint(str, 10, 64); err == nil {
 		v.SetUint(u)
 		return nil
@@ -83,6 +99,14 @@ func parseUintValue(v reflect.Value, str string) error {
 }
 
 func parseFloatValue(v reflect.Value, str string) error {
+	if str == GetZeroControlChar() {
+		// If str is the "zero" control char, set the value to field's zero
+		// value.
+		v.Set(reflect.Zero(v.Type()))
+
+		return nil
+	}
+
 	if f, err := strconv.ParseFloat(str, 64); err == nil {
 		v.SetFloat(f)
 		return nil
@@ -92,6 +116,14 @@ func parseFloatValue(v reflect.Value, str string) error {
 }
 
 func parseBoolValue(v reflect.Value, str string) error {
+	if str == GetZeroControlChar() {
+		// If str is the "zero" control char, set the value to field's zero
+		// value.
+		v.Set(reflect.Zero(v.Type()))
+
+		return nil
+	}
+
 	if b, err := strconv.ParseBool(str); err == nil {
 		v.SetBool(b)
 		return nil
@@ -101,10 +133,26 @@ func parseBoolValue(v reflect.Value, str string) error {
 }
 
 func parseStringValue(v reflect.Value, str string) {
+	if str == GetZeroControlChar() {
+		// If str is the "zero" control char, set the value to field's zero
+		// value.
+		v.Set(reflect.Zero(v.Type()))
+
+		return
+	}
+
 	v.SetString(str)
 }
 
 func parseTimeValue(v reflect.Value, str string) error {
+	if str == GetZeroControlChar() {
+		// If str is the "zero" control char, set the value to field's zero
+		// value.
+		v.Set(reflect.Zero(v.Type()))
+
+		return nil
+	}
+
 	value, err := dateparse.ParseAny(str)
 	if err != nil {
 		return err
@@ -116,12 +164,22 @@ func parseTimeValue(v reflect.Value, str string) error {
 }
 
 func parseDurationValue(v reflect.Value, str string) error {
-	if d, err := time.ParseDuration(str); err == nil {
-		v.Set(reflect.ValueOf(d))
+	if str == GetZeroControlChar() {
+		// If str is the "zero" control char, set the value to field's zero
+		// value.
+		v.Set(reflect.Zero(v.Type()))
+
 		return nil
-	} else {
+	}
+
+	d, err := time.ParseDuration(str)
+	if err != nil {
 		return err
 	}
+
+	v.Set(reflect.ValueOf(d))
+
+	return nil
 }
 
 func parseSingleValue(v reflect.Value, t reflect.Type, str string) error {
@@ -152,6 +210,10 @@ func parseSingleValue(v reflect.Value, t reflect.Type, str string) error {
 }
 
 func parseMap(valueType reflect.Type, tag string) (interface{}, error) {
+	if tag == GetZeroControlChar() {
+		return reflect.MakeMap(valueType).Interface(), nil
+	}
+
 	tagPairs := strings.Split(tag, ",")
 
 	mapValue := reflect.MakeMap(valueType)
@@ -173,6 +235,10 @@ func parseMap(valueType reflect.Type, tag string) (interface{}, error) {
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse value %s: %v", kv[1], err)
 			}
+
+			// Convert the value to the correct type.
+			value = reflect.ValueOf(value).Convert(valueType.Elem()).Interface()
+
 			mapValue.SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(value))
 		} else {
 			value, err := parseValue(valueType.Elem(), kv[1])
@@ -192,6 +258,11 @@ func parseValueForInterface(t reflect.Type, str string) (interface{}, error) {
 		if d, err := time.ParseDuration(str); err == nil {
 			return d, nil
 		}
+	}
+
+	// Check for int first
+	if i, err := strconv.Atoi(str); err == nil {
+		return i, nil
 	}
 
 	// Check for int64 first, as ParseInt handles integers correctly
@@ -224,6 +295,14 @@ func parseValueForInterface(t reflect.Type, str string) (interface{}, error) {
 }
 
 func parseSlice(v reflect.Value, elemType reflect.Type, tag string) error {
+	if tag == GetZeroControlChar() {
+		// If str is the "zero" control char, set the value to field's zero
+		// value.
+		v.Set(reflect.MakeSlice(v.Type(), 0, 0))
+
+		return nil
+	}
+
 	tagElements := strings.Split(tag, ",")
 
 	slice := reflect.MakeSlice(reflect.SliceOf(elemType), len(tagElements), len(tagElements))
@@ -288,12 +367,6 @@ func parseValue(t reflect.Type, str string) (interface{}, error) {
 				return nil, err
 			}
 			v = reflect.ValueOf(value)
-		} else if t == reflect.TypeOf(time.Duration(0)) {
-			d, err := time.ParseDuration(str)
-			if err != nil {
-				return nil, err
-			}
-			v = reflect.ValueOf(d)
 		} else {
 			return nil, fmt.Errorf("unsupported struct type: %s", t)
 		}
@@ -318,11 +391,6 @@ func setValueFromTag(v reflect.Value, field reflect.StructField, tag string, con
 	}
 
 	if !v.IsZero() {
-		return nil
-	}
-
-	if tag == "-" {
-		v.Set(reflect.Zero(v.Type()))
 		return nil
 	}
 

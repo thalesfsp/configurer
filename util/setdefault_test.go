@@ -41,7 +41,13 @@ func testStringDefaults(t *testing.T) {
 		T4: "",      // Should replace
 	}
 
-	if err := SetDefault(&r); err != nil {
+	if err := Process("default", &r, func(v reflect.Value, field reflect.StructField, tag string) error {
+		if err := setValueFromTag(v, field, tag, tag); err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -74,7 +80,13 @@ func testBoolDefaults(t *testing.T) {
 		T4: false, // Should do nothing as no default tag is set.
 	}
 
-	if err := SetDefault(&r); err != nil {
+	if err := Process("default", &r, func(v reflect.Value, field reflect.StructField, tag string) error {
+		if err := setValueFromTag(v, field, tag, tag); err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -107,7 +119,13 @@ func testFloat64Defaults(t *testing.T) {
 		T4: 0,    // Should replace
 	}
 
-	if err := SetDefault(&r); err != nil {
+	if err := Process("default", &r, func(v reflect.Value, field reflect.StructField, tag string) error {
+		if err := setValueFromTag(v, field, tag, tag); err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -140,7 +158,13 @@ func testIntDefaults(t *testing.T) {
 		T4: 0,     // Should replace
 	}
 
-	if err := SetDefault(&r); err != nil {
+	if err := Process("default", &r, func(v reflect.Value, field reflect.StructField, tag string) error {
+		if err := setValueFromTag(v, field, tag, tag); err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -171,7 +195,13 @@ func testSliceDefaults(t *testing.T) {
 
 	r := TestData{}
 
-	if err := SetDefault(&r); err != nil {
+	if err := Process("default", &r, func(v reflect.Value, field reflect.StructField, tag string) error {
+		if err := setValueFromTag(v, field, tag, tag); err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -213,18 +243,24 @@ func testMapDefaults(t *testing.T) {
 		T11 map[string]bool          `default:"asd:true,dfg:false"`
 		T12 map[string]time.Duration `default:"asd:1s,dfg:2s"`
 		T13 map[string]time.Time     `default:"asd:2018-01-01,dfg:2019-01-02"`
-		T14 map[string]interface{}   `default:"[]"` // Should be empty map
-		T15 map[string]interface{}   `default:""`   // Should be empty map
+		T14 map[string]interface{}   `default:"zero"` // Should be empty map
+		T15 map[string]interface{}   `default:"zero"` // Should be empty map
 	}
 
 	r := TestData{}
 
-	if err := SetDefault(&r); err != nil {
+	if err := Process("default", &r, func(v reflect.Value, field reflect.StructField, tag string) error {
+		if err := setValueFromTag(v, field, tag, tag); err != nil {
+			return err
+		}
+
+		return nil
+	}); err != nil {
 		t.Fatal(err)
 	}
 
 	if r.T1["asd"] != "qwe" || r.T1["dfg"] != 1 {
-		t.Fatal("expected T1 to be {'asd': 'qwe', 'dfg': 1}")
+		t.Fatal("expected T1 to be {'asd': 'qwe', 'dfg': 1}", r.T1["asd"], r.T1["dfg"])
 	}
 	if !reflect.DeepEqual(r.T2, map[string]interface{}{"asd": "qwe", "dfg": "text1"}) {
 		t.Fatal("expected T2 to be {'asd': 'qwe', 'dfg': 'text1'}")

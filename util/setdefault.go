@@ -1,7 +1,6 @@
 package util
 
 import (
-	"fmt"
 	"reflect"
 	"time"
 
@@ -50,10 +49,7 @@ func SetDefault(v any) error {
 		// Get the field tag value.
 		typeField := val.Type().Field(i)
 
-		// Print field name and tag value.
-		fmt.Printf("Field: %s, Tag: '%s'\n", typeField.Name, typeField.Tag.Get(tagName))
-
-		// Check if 'json' tag is present
+		// Check if tag is present
 		if _, ok := typeField.Tag.Lookup(tagName); !ok {
 			continue
 		}

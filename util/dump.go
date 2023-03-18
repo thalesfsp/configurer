@@ -48,10 +48,6 @@ func Dump(v any) error {
 		return err
 	}
 
-	// if err := SetEnv(v); err != nil {
-	// 	return err
-	// }
-
 	if err := SetID(v); err != nil {
 		return err
 	}
