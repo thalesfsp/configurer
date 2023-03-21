@@ -384,14 +384,14 @@ func TestSetID(t *testing.T) {
 			input:       TestData{},
 			expectedLen: 36,
 		},
-		// {
-		// 	name: "specifying id - should not set",
-		// 	input: TestData{
-		// 		ID: "123123123",
-		// 	},
-		// 	expectedID:  "123123123",
-		// 	expectedLen: 9,
-		// },
+		{
+			name: "specifying id - should not set",
+			input: TestData{
+				ID: "123123123",
+			},
+			expectedID:  "123123123",
+			expectedLen: 9,
+		},
 	}
 
 	for _, tc := range testCases {
