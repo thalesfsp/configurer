@@ -15,57 +15,6 @@ import (
 // Func is the callback function type.
 type Func func(v reflect.Value, field reflect.StructField, tag string) error
 
-// process a struct and its fields. Use it to build your own custom tag handler.
-//
-//nolint:errcheck
-func process(tagName string, s any, cb Func) error {
-	v := reflect.ValueOf(s)
-
-	if v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
-		return customerror.NewInvalidError("`s`, it must be set, and be a pointer")
-	}
-
-	v = v.Elem()
-
-	t := v.Type()
-
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-
-		// Skip unexported fields like `json` tag.
-		if field.PkgPath != "" {
-			continue
-		}
-
-		value := v.Field(i)
-
-		customtag := field.Tag.Get(tagName)
-
-		// Skip ignored fields like `json:"-"`.
-		if customtag == "-" {
-			continue
-		}
-
-		if customtag != "" {
-			cb(value, field, customtag) // Pass the value directly.
-		}
-
-		if value.Kind() == reflect.Ptr && !value.IsNil() {
-			elem := value.Elem()
-
-			if err := process(tagName, elem.Addr().Interface(), cb); err != nil {
-				return err
-			}
-		} else if value.Kind() == reflect.Struct {
-			if err := process(tagName, value.Addr().Interface(), cb); err != nil {
-				return err
-			}
-		}
-	}
-
-	return nil
-}
-
 func parseIntValue(v reflect.Value, str string) error {
 	// If the type of the field is time.Duration, we need to parse it as a duration.
 	if v.Type() == reflect.TypeOf(time.Duration(0)) {
@@ -168,9 +117,17 @@ func parseTimeValue(v reflect.Value, str string) error {
 		return nil
 	}
 
-	value, err := dateparse.ParseAny(str)
-	if err != nil {
-		return err
+	var value time.Time
+
+	if str == "now" {
+		value = time.Now()
+	} else {
+		v, err := dateparse.ParseAny(str)
+		if err != nil {
+			return err
+		}
+
+		value = v
 	}
 
 	v.Set(reflect.ValueOf(value))
@@ -448,6 +405,57 @@ func setValueFromTag(v reflect.Value, field reflect.StructField, tag string, con
 		}
 	default:
 		return errors.New("unsupported type")
+	}
+
+	return nil
+}
+
+// process a struct and its fields. Use it to build your own custom tag handler.
+//
+//nolint:errcheck
+func process(tagName string, s any, cb Func) error {
+	v := reflect.ValueOf(s)
+
+	if v.Kind() != reflect.Ptr || v.Elem().Kind() != reflect.Struct {
+		return customerror.NewInvalidError("`s`, it must be set, and be a pointer")
+	}
+
+	v = v.Elem()
+
+	t := v.Type()
+
+	for i := 0; i < t.NumField(); i++ {
+		field := t.Field(i)
+
+		// Skip unexported fields like `json` tag.
+		if field.PkgPath != "" {
+			continue
+		}
+
+		value := v.Field(i)
+
+		customtag := field.Tag.Get(tagName)
+
+		// Skip ignored fields like `json:"-"`.
+		if customtag == "-" {
+			continue
+		}
+
+		if customtag != "" {
+			cb(value, field, customtag) // Pass the value directly.
+		}
+
+		if value.Kind() == reflect.Ptr && !value.IsNil() {
+			elem := value.Elem()
+
+			if err := process(tagName, elem.Addr().Interface(), cb); err != nil {
+				return err
+			}
+		} else if value.Kind() == reflect.Struct {
+			if err := process(tagName, value.Addr().Interface(), cb); err != nil {
+				return err
+			}
+		}
 	}
 
 	return nil

@@ -289,6 +289,7 @@ func TestProcess_3(t *testing.T) {
 }
 
 type timeDurationStruct struct {
+	TimeNow           time.Time     `customtag:"now"`
 	TimeField         time.Time     `customtag:"2022-01-01"`
 	TimeFieldZero     time.Time     `customtag:"zero"`
 	DurationField     time.Duration `customtag:"1h"`
@@ -306,6 +307,7 @@ func TestProcess_TimeDurationStruct(t *testing.T) {
 	})
 
 	assert.NoError(t, err)
+	assert.NotZero(t, tds.TimeNow)
 	assert.Equal(t, time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC), tds.TimeField)
 	assert.Equal(t, time.Time{}, tds.TimeFieldZero)
 	assert.Equal(t, time.Hour, tds.DurationField)
@@ -328,22 +330,7 @@ func TestProcess_PrimitivesStruct(t *testing.T) {
 	})
 
 	assert.NoError(t, err)
-	assert.Equal(t, &TestStruct{
-		// Field1:     "field1",
-		// Field2:     42,
-		// Field3:     43,
-		// Field4:     3.14,
-		// Field5:     true,
-		// Field6:     time.Date(2023, 3, 18, 0, 0, 0, 0, time.UTC),
-		// Field7:     time.Hour,
-		Field1Zero: "",
-		// Field2Zero: 0,
-		// Field3Zero: 0,
-		// Field4Zero: 0,
-		// Field5Zero: false,
-		// Field6Zero: time.Time{},
-		// Field7Zero: time.Duration(0),
-	}, ts)
+	assert.Equal(t, &TestStruct{Field1Zero: ""}, ts)
 }
 
 func TestProcess_SliceStruct(t *testing.T) {
