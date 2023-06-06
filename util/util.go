@@ -6,7 +6,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
-	"github.com/thalesfsp/configurer/internal/validation"
+	"github.com/thalesfsp/validation"
 )
 
 //////

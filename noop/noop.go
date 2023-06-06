@@ -7,10 +7,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/thalesfsp/configurer/internal/validation"
 	"github.com/thalesfsp/configurer/option"
 	"github.com/thalesfsp/configurer/provider"
+	"github.com/thalesfsp/validation"
 )
+
+// Name of the provider.
+const Name = "noop"
 
 // NoOp provider definition.
 type NoOp struct {
@@ -69,6 +72,13 @@ func (n *NoOp) Load(ctx context.Context, opts ...option.KeyFunc) (map[string]str
 	return finalValues, nil
 }
 
+// Write stores a new secret.
+//
+// NOTE: Not all providers support writing secrets.
+func (n *NoOp) Write(ctx context.Context, values map[string]interface{}) error {
+	return nil
+}
+
 // New sets up a new NoOp provider.
 func New(override bool) (provider.IProvider, error) {
 	provider, err := provider.New("noop", override)
@@ -80,7 +90,7 @@ func New(override bool) (provider.IProvider, error) {
 		Provider: provider,
 	}
 
-	if err := validation.ValidateStruct(noop); err != nil {
+	if err := validation.Validate(noop); err != nil {
 		return nil, err
 	}
 

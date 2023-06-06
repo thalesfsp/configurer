@@ -12,7 +12,7 @@ import (
 
 var dotEnvFiles []string
 
-// dotEnvCmd represents the vault command.
+// dotEnvCmd represents the env command.
 var dotEnvCmd = &cobra.Command{
 	Aliases: []string{"d"},
 	Short:   "DotEnv provider",

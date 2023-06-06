@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"context"
 	"log"
 	"os"
 	"os/exec"
@@ -11,8 +12,12 @@ import (
 	"time"
 
 	"github.com/kvz/logstreamer"
+	"github.com/thalesfsp/configurer/parsers/env"
+	"github.com/thalesfsp/configurer/parsers/jsonp"
+	"github.com/thalesfsp/configurer/parsers/toml"
 	"github.com/thalesfsp/configurer/provider"
 	"github.com/thalesfsp/configurer/util"
+	"github.com/thalesfsp/customerror"
 	"github.com/thalesfsp/sypl"
 	"github.com/thalesfsp/sypl/level"
 )
@@ -171,4 +176,63 @@ func DumpToFile(file *os.File, finalValues map[string]string) error {
 	}
 
 	return nil
+}
+
+// ParseFile parse file. Extension is used to determine the format.
+func ParseFile(ctx context.Context, file *os.File) (map[string]any, error) {
+	extension := filepath.Ext(file.Name())
+
+	switch extension {
+	case ".env":
+		p, err := env.New()
+		if err != nil {
+			return nil, err
+		}
+
+		r, err := p.Read(ctx, file)
+		if err != nil {
+			return nil, err
+		}
+
+		return r, nil
+	case ".json":
+		p, err := jsonp.New()
+		if err != nil {
+			return nil, err
+		}
+
+		r, err := p.Read(ctx, file)
+		if err != nil {
+			return nil, err
+		}
+
+		return r, nil
+	case ".yaml", ".yml":
+		p, err := env.New()
+		if err != nil {
+			return nil, err
+		}
+
+		r, err := p.Read(ctx, file)
+		if err != nil {
+			return nil, err
+		}
+
+		return r, nil
+	case ".toml":
+		t, err := toml.New()
+		if err != nil {
+			return nil, err
+		}
+
+		r, err := t.Read(ctx, file)
+		if err != nil {
+			return nil, err
+		}
+
+		return r, nil
+	default:
+		return nil, customerror.
+			NewInvalidError("file extension, allowed: .env, .json, .yaml | .yml, .toml")
+	}
 }

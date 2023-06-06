@@ -2,10 +2,10 @@ package cmd
 
 var providerUsageTemplate = `Usage:{{if .Runnable}}
 
-For a single command:
+Load, for a single command:
 {{.UseLine}} -- [command to run] [command args]
 
-For multiple commands (use the -c flag):
+Load, for multiple commands (use the -c flag):
 {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
 {{.CommandPath}} [command]{{end}}{{if gt (len .Aliases) 0}}
 

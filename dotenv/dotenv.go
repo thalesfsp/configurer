@@ -3,13 +3,17 @@ package dotenv
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/thalesfsp/configurer/internal/validation"
 	"github.com/thalesfsp/configurer/option"
 	"github.com/thalesfsp/configurer/provider"
 	"github.com/thalesfsp/customerror"
 	"github.com/thalesfsp/godotenv"
+	"github.com/thalesfsp/validation"
 )
+
+// Name of the provider.
+const Name = "env"
 
 // DotEnv provider definition.
 type DotEnv struct {
@@ -46,6 +50,30 @@ func (d *DotEnv) Load(ctx context.Context, opts ...option.KeyFunc) (map[string]s
 	return finalValues, nil
 }
 
+// Write stores a new secret.
+//
+// NOTE: Not all providers support writing secrets.
+func (d *DotEnv) Write(ctx context.Context, values map[string]interface{}) error {
+	// This operation is 1:1.
+	if len(d.FilePaths) > 1 {
+		return customerror.NewInvalidError("filePaths, for the Write operation only one file should be used")
+	}
+
+	convertedMap := make(map[string]string)
+
+	// Merge the existing .env file content with the new values
+	for key, value := range values {
+		convertedMap[key] = fmt.Sprintf("%v", value)
+	}
+
+	// Write the updated values back to the .env file
+	if err := godotenv.Write(convertedMap, d.FilePaths[0]); err != nil {
+		return customerror.NewFailedToError("write path", customerror.WithError(err))
+	}
+
+	return nil
+}
+
 // New sets up a new DotEnv provider.
 func New(override bool, files ...string) (provider.IProvider, error) {
 	provider, err := provider.New("dotenv", override)
@@ -63,7 +91,7 @@ func New(override bool, files ...string) (provider.IProvider, error) {
 		FilePaths: files,
 	}
 
-	if err := validation.ValidateStruct(dotEnv); err != nil {
+	if err := validation.Validate(dotEnv); err != nil {
 		return nil, err
 	}
 

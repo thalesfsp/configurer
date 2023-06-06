@@ -5,15 +5,22 @@ import (
 	"context"
 
 	"github.com/thalesfsp/configurer/internal/logging"
-	"github.com/thalesfsp/configurer/internal/validation"
 	"github.com/thalesfsp/configurer/option"
 	"github.com/thalesfsp/configurer/util"
+	"github.com/thalesfsp/validation"
 )
+
+//////
+// Vars, consts, and types.
+//////
 
 // IProvider defines what a provider does.
 type IProvider interface {
 	// ExportToStruct exports the loaded configuration to the given struct.
 	ExportToStruct(v any) error
+
+	// GetName returns the name of the provider.
+	GetName() string
 
 	// GetLogger returns the logger.
 	GetLogger() *logging.Logger
@@ -23,6 +30,9 @@ type IProvider interface {
 
 	// Load retrieves the configuration, and exports it to the environment.
 	Load(ctx context.Context, opts ...option.KeyFunc) (map[string]string, error)
+
+	// Write stores a new secret in the Vault.
+	Write(ctx context.Context, values map[string]interface{}) error
 }
 
 // Provider contains common settings for all providers.
@@ -36,6 +46,15 @@ type Provider struct {
 	// Override is the flag that indicates if the provider should override
 	// existing environment variables. Default is `false`.
 	Override bool `json:"override"`
+}
+
+//////
+// Methods.
+//////
+
+// GetName returns the name of the provider.
+func (p *Provider) GetName() string {
+	return p.Name
 }
 
 // GetLogger returns the logger.
@@ -61,7 +80,7 @@ func New(name string, override bool) (*Provider, error) {
 		Override: override,
 	}
 
-	if err := validation.ValidateStruct(provider); err != nil {
+	if err := validation.Validate(provider); err != nil {
 		return nil, err
 	}
 

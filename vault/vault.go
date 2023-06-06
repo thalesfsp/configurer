@@ -6,11 +6,14 @@ import (
 	"fmt"
 
 	vault "github.com/hashicorp/vault/api"
-	"github.com/thalesfsp/configurer/internal/validation"
 	"github.com/thalesfsp/configurer/option"
 	"github.com/thalesfsp/configurer/provider"
 	"github.com/thalesfsp/customerror"
+	"github.com/thalesfsp/validation"
 )
+
+// Name of the provider.
+const Name = "vault"
 
 // Config is an alias to Vault configuration.
 type Config = *vault.Config
@@ -65,6 +68,26 @@ func (v *Vault) Load(ctx context.Context, opts ...option.KeyFunc) (map[string]st
 	return finalValues, nil
 }
 
+// Write stores a new secret.
+//
+// NOTE: Not all providers support writing secrets.
+func (v *Vault) Write(ctx context.Context, values map[string]interface{}) error {
+	// Ensure the secret values are not nil.
+	if values == nil {
+		return customerror.NewRequiredError("values")
+	}
+
+	// Write the secret to the Vault.
+	if _, err := v.
+		client.
+		KVv2(v.SecretInformation.MountPath).
+		Put(ctx, v.SecretInformation.SecretPath, values); err != nil {
+		return customerror.NewFailedToError("write secret", customerror.WithError(err))
+	}
+
+	return nil
+}
+
 // NewWithConfig is the same as New but allows to set/pass additional
 // configuration to the Vault client. If `config` is set to `nil`,
 // Vault will use configuration from `DefaultConfig()`, which is
@@ -87,7 +110,7 @@ func NewWithConfig(
 		SecretInformation: secretInformation,
 	}
 
-	if err := validation.ValidateStruct(v); err != nil {
+	if err := validation.Validate(v); err != nil {
 		return nil, err
 	}
 

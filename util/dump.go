@@ -5,8 +5,8 @@ import (
 	"os"
 	"reflect"
 
-	"github.com/thalesfsp/configurer/internal/validation"
 	"github.com/thalesfsp/customerror"
+	"github.com/thalesfsp/validation"
 	"gopkg.in/yaml.v2"
 )
 
@@ -123,7 +123,7 @@ func Dump(v any) error {
 		return err
 	}
 
-	return validation.ValidateStruct(v)
+	return validation.Validate(v)
 }
 
 // Process `v`:
