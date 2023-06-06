@@ -28,6 +28,8 @@ type ENV struct {
 //////
 
 // Read implementation of the Reader interface for ENV files.
+//
+//nolint:gomnd
 func (e *ENV) Read(ctx context.Context, r io.Reader) (map[string]any, error) {
 	values := make(map[string]any)
 	scanner := bufio.NewScanner(r)
