@@ -54,7 +54,7 @@ NOTE: Double dash (--) have precedence over the "-c" flag.
 			log.Fatalln(err)
 		}
 
-		var options []option.KeyFunc
+		var options []option.LoadKeyFunc
 
 		if keyCaserOptions != "" {
 			options = append(options, option.WithKeyCaser(keyCaserOptions))

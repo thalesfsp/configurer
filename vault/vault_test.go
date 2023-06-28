@@ -64,7 +64,7 @@ func TestNew(t *testing.T) {
 
 	prefix := "TESTING_VAULT_"
 
-	defaultOptions := []option.KeyFunc{
+	defaultOptions := []option.LoadKeyFunc{
 		option.WithKeyPrefixer(prefix),
 		option.WithKeyCaser("upper"),
 	}
@@ -78,7 +78,7 @@ func TestNew(t *testing.T) {
 		name          string
 		args          args
 		envFunc       func()
-		opts          []option.KeyFunc
+		opts          []option.LoadKeyFunc
 		credsAPI      *Auth
 		secretAPI     *SecretInformation
 		secretValue   map[string]interface{}

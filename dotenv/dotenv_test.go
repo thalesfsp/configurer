@@ -18,7 +18,7 @@ func TestDotEnv_Load(t *testing.T) {
 	tests := []struct {
 		fields      fields
 		name        string
-		opts        []option.KeyFunc
+		opts        []option.LoadKeyFunc
 		override    bool
 		wantErr     bool
 		wantKey     string
@@ -54,7 +54,7 @@ func TestDotEnv_Load(t *testing.T) {
 			fields: fields{
 				FilePaths: []string{"testing.env"},
 			},
-			opts: []option.KeyFunc{
+			opts: []option.LoadKeyFunc{
 				option.WithKeyCaser("upper"),
 				option.WithKeyPrefixer("TESTING_DOTENV_"),
 			},
@@ -66,7 +66,7 @@ func TestDotEnv_Load(t *testing.T) {
 			fields: fields{
 				FilePaths: []string{"testing.env"},
 			},
-			opts: []option.KeyFunc{
+			opts: []option.LoadKeyFunc{
 				option.WithKeyReplacer(func(key string) string {
 					return "TESTING123_" + key
 				}),

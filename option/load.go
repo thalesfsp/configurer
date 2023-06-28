@@ -28,11 +28,11 @@ const (
 // AllowedCases is the list of allowed cases.
 var AllowedCases = []string{Camel, Kebab, Lower, Snake, Upper}
 
-// KeyFunc allows to specify loading options.
-type KeyFunc func(key string) string
+// LoadKeyFunc allows to specify loading options.
+type LoadKeyFunc func(key string) string
 
 // WithKeyPrefixer adds a prefix to the key.
-func WithKeyPrefixer(prefix string) KeyFunc {
+func WithKeyPrefixer(prefix string) LoadKeyFunc {
 	return func(key string) string {
 		return fmt.Sprintf("%s%s", prefix, key)
 	}
@@ -41,7 +41,7 @@ func WithKeyPrefixer(prefix string) KeyFunc {
 // WithKeyCaser changes the case of the key using the `strcase` package.
 //
 // SEE: github.com/iancoleman/strcase.
-func WithKeyCaser(caseType string) KeyFunc {
+func WithKeyCaser(caseType string) LoadKeyFunc {
 	return func(key string) string {
 		// Do nothing is the case type is not allowed.
 		if !strings.Contains(strings.Join(AllowedCases, ","), caseType) {
@@ -66,7 +66,7 @@ func WithKeyCaser(caseType string) KeyFunc {
 }
 
 // WithKeyReplacer dynamically replaces the key.
-func WithKeyReplacer(replacer KeyFunc) KeyFunc {
+func WithKeyReplacer(replacer LoadKeyFunc) LoadKeyFunc {
 	return func(key string) string {
 		return replacer(key)
 	}

@@ -42,7 +42,7 @@ type Vault struct {
 }
 
 // Load retrieves the configuration, and exports it to the environment.
-func (v *Vault) Load(ctx context.Context, opts ...option.KeyFunc) (map[string]string, error) {
+func (v *Vault) Load(ctx context.Context, opts ...option.LoadKeyFunc) (map[string]string, error) {
 	secret, err := v.client.KVv2(v.SecretInformation.MountPath).Get(ctx, v.SecretInformation.SecretPath)
 	if err != nil {
 		return nil, customerror.NewFailedToError("get secret", customerror.WithError(err))
@@ -71,10 +71,19 @@ func (v *Vault) Load(ctx context.Context, opts ...option.KeyFunc) (map[string]st
 // Write stores a new secret.
 //
 // NOTE: Not all providers support writing secrets.
-func (v *Vault) Write(ctx context.Context, values map[string]interface{}) error {
+func (v *Vault) Write(ctx context.Context, values map[string]interface{}, opts ...option.WriteFunc) error {
 	// Ensure the secret values are not nil.
 	if values == nil {
 		return customerror.NewRequiredError("values")
+	}
+
+	// Process the options.
+	var options option.Write
+
+	for _, opt := range opts {
+		if err := opt(&options); err != nil {
+			return err
+		}
 	}
 
 	// Write the secret to the Vault.

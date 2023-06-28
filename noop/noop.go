@@ -9,6 +9,7 @@ import (
 
 	"github.com/thalesfsp/configurer/option"
 	"github.com/thalesfsp/configurer/provider"
+	"github.com/thalesfsp/customerror"
 	"github.com/thalesfsp/validation"
 )
 
@@ -49,7 +50,7 @@ func split(v string) (string, string) {
 }
 
 // Load retrieves the configuration, and exports it to the environment.
-func (n *NoOp) Load(ctx context.Context, opts ...option.KeyFunc) (map[string]string, error) {
+func (n *NoOp) Load(ctx context.Context, opts ...option.LoadKeyFunc) (map[string]string, error) {
 	finalValues := make(map[string]string)
 
 	// Should export secrets to the environment.
@@ -75,7 +76,21 @@ func (n *NoOp) Load(ctx context.Context, opts ...option.KeyFunc) (map[string]str
 // Write stores a new secret.
 //
 // NOTE: Not all providers support writing secrets.
-func (n *NoOp) Write(ctx context.Context, values map[string]interface{}) error {
+func (n *NoOp) Write(ctx context.Context, values map[string]interface{}, opts ...option.WriteFunc) error {
+	// Ensure the secret values are not nil.
+	if values == nil {
+		return customerror.NewRequiredError("values")
+	}
+
+	// Process the options.
+	var options option.Write
+
+	for _, opt := range opts {
+		if err := opt(&options); err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 

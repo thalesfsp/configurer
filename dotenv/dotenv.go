@@ -24,7 +24,7 @@ type DotEnv struct {
 }
 
 // Load retrieves the configuration, and exports it to the environment.
-func (d *DotEnv) Load(ctx context.Context, opts ...option.KeyFunc) (map[string]string, error) {
+func (d *DotEnv) Load(ctx context.Context, opts ...option.LoadKeyFunc) (map[string]string, error) {
 	envMap, err := godotenv.Read(d.FilePaths...)
 	if err != nil {
 		return nil, customerror.NewFailedToError("read path", customerror.WithError(err))
@@ -53,10 +53,24 @@ func (d *DotEnv) Load(ctx context.Context, opts ...option.KeyFunc) (map[string]s
 // Write stores a new secret.
 //
 // NOTE: Not all providers support writing secrets.
-func (d *DotEnv) Write(ctx context.Context, values map[string]interface{}) error {
+func (d *DotEnv) Write(ctx context.Context, values map[string]interface{}, opts ...option.WriteFunc) error {
+	// Ensure the secret values are not nil.
+	if values == nil {
+		return customerror.NewRequiredError("values")
+	}
+
 	// This operation is 1:1.
 	if len(d.FilePaths) > 1 {
 		return customerror.NewInvalidError("filePaths, for the Write operation only one file should be used")
+	}
+
+	// Process the options.
+	var options option.Write
+
+	for _, opt := range opts {
+		if err := opt(&options); err != nil {
+			return err
+		}
 	}
 
 	convertedMap := make(map[string]string)

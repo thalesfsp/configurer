@@ -3,16 +3,22 @@ package provider
 
 import (
 	"context"
+	"net/http"
 
 	"github.com/thalesfsp/configurer/internal/logging"
 	"github.com/thalesfsp/configurer/option"
 	"github.com/thalesfsp/configurer/util"
+	"github.com/thalesfsp/customerror"
 	"github.com/thalesfsp/validation"
 )
 
 //////
 // Vars, consts, and types.
 //////
+
+// ErrNotSupported is the error returned when a provider does not support some
+// operation, e.g., Load (read secrets).
+var ErrNotSupported = customerror.New("not supported", customerror.WithStatusCode(http.StatusBadRequest))
 
 // IProvider defines what a provider does.
 type IProvider interface {
@@ -29,10 +35,15 @@ type IProvider interface {
 	GetOverride() bool
 
 	// Load retrieves the configuration, and exports it to the environment.
-	Load(ctx context.Context, opts ...option.KeyFunc) (map[string]string, error)
+	//
+	// NOTE: Not all providers allow loading secrets, for example, GitHub. They
+	// are designed to be write-only stores of information. This is a security
+	// measure to prevent exposure of sensitive data. If that's the case, an
+	// error ErrNotSupported is returned.
+	Load(ctx context.Context, opts ...option.LoadKeyFunc) (map[string]string, error)
 
 	// Write stores a new secret in the Vault.
-	Write(ctx context.Context, values map[string]interface{}) error
+	Write(ctx context.Context, values map[string]interface{}, opts ...option.WriteFunc) error
 }
 
 // Provider contains common settings for all providers.
