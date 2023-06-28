@@ -53,6 +53,10 @@ issues:
       linters:
         - lll
 
+    - path: github/github.go
+      linters:
+        - gomnd
+
     - path: util/
       linters:
         - gomnd

@@ -153,7 +153,7 @@ func (v *GitHub) Write(ctx context.Context, values map[string]interface{}, opts 
 	}
 
 	// Write the secrets.
-	concurrentloop.MapM(ctx, values, func(ctx context.Context, key string, item any) (bool, error) {
+	if _, err := concurrentloop.MapM(ctx, values, func(ctx context.Context, key string, item any) (bool, error) {
 		encryptedValue, err := encrypt(v.PublicKeyResponse.Key, fmt.Sprintf("%v", item))
 		if err != nil {
 			return false, err
@@ -198,7 +198,9 @@ func (v *GitHub) Write(ctx context.Context, values map[string]interface{}, opts 
 	},
 		concurrentloop.WithBatchSize(10),
 		concurrentloop.WithRandomDelayTime(100, 700, time.Millisecond),
-	)
+	); err != nil {
+		return err
+	}
 
 	return nil
 }
