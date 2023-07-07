@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 	"os"
 	"time"
 
@@ -39,6 +40,12 @@ type PublicKeyResponse struct {
 	KeyID string `json:"key_id"`
 }
 
+// VariableRequest is the request to store a new secret.
+type VariableRequest struct {
+	Name  string `json:"name"`
+	Value string `json:"value"`
+}
+
 // SecretRequest is the request to store a new secret.
 type SecretRequest struct {
 	EncryptedValue string `json:"encrypted_value"`
@@ -62,6 +69,19 @@ type GitHub struct {
 	Token string `json:"-" validate:"required"`
 
 	client *httpclient.Client `json:"-" validate:"required"`
+}
+
+// SecretsResponseSecret is the secret information from the GitHub API.
+type SecretsResponseSecret struct {
+	Name      string    `json:"name"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// SecretsResponse is the response from listing secrets.
+type SecretsResponse struct {
+	TotalCount int                     `json:"total_count"`
+	Secrets    []SecretsResponseSecret `json:"secrets"`
 }
 
 //////
@@ -110,6 +130,57 @@ func (v *GitHub) GetRepository(ctx context.Context) (*Repository, error) {
 	return &repository, nil
 }
 
+// List secrets.
+func List(ctx context.Context, v *GitHub) (*SecretsResponse, error) {
+	var sR SecretsResponse
+
+	resp, err := v.client.Get(
+		ctx,
+		fmt.Sprintf(
+			"https://api.github.com/repos/%s/%s/actions/secrets",
+			v.Owner,
+			v.Repo,
+		),
+		httpclient.WithRespBody(&sR),
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	return &sR, nil
+}
+
+// Delete secrets.
+func Delete(ctx context.Context, v *GitHub, secrets ...string) error {
+	if _, err := concurrentloop.Map(ctx, secrets, func(ctx context.Context, secret string) (bool, error) {
+		resp, err := v.client.Delete(
+			ctx,
+			fmt.Sprintf(
+				"https://api.github.com/repos/%s/%s/actions/secrets/%s",
+				v.Owner,
+				v.Repo,
+				secret,
+			),
+		)
+		if err != nil {
+			return false, err
+		}
+
+		defer resp.Body.Close()
+
+		return true, nil
+	},
+		concurrentloop.WithBatchSize(10),
+		concurrentloop.WithRandomDelayTime(100, 700, time.Millisecond),
+	); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 //////
 // IProvider implementation.
 //////
@@ -154,45 +225,106 @@ func (v *GitHub) Write(ctx context.Context, values map[string]interface{}, opts 
 
 	// Write the secrets.
 	if _, err := concurrentloop.MapM(ctx, values, func(ctx context.Context, key string, item any) (bool, error) {
+		variableRequest := &VariableRequest{
+			Name:  key,
+			Value: fmt.Sprintf("%v", item),
+		}
+
 		encryptedValue, err := encrypt(v.PublicKeyResponse.Key, fmt.Sprintf("%v", item))
 		if err != nil {
 			return false, err
 		}
 
-		secretsRequest := &SecretRequest{
+		secretRequest := &SecretRequest{
 			EncryptedValue: encryptedValue,
 			KeyID:          v.PublicKeyResponse.KeyID,
 		}
 
+		//////
+		// Default case: it's a REPOSITORY AND A SECRET.
+		//////
+
+		finalVerb := http.MethodPut
+
+		finalURL := fmt.Sprintf(
+			"https://api.github.com/repos/%s/%s/actions/secrets/%s",
+			v.Owner,
+			v.Repo,
+			key,
+		)
+
+		finalReqBody := httpclient.WithReqBody(secretRequest)
+
+		//////
+		// Deal with cases where it's a REPOSITORY AND a VARIABLE.
+		//////
+
+		if options.Variable {
+			finalURL = fmt.Sprintf(
+				"https://api.github.com/repos/%s/%s/actions/variables",
+				v.Owner,
+				v.Repo,
+			)
+
+			finalReqBody = httpclient.WithReqBody(variableRequest)
+
+			finalVerb = http.MethodPost
+		}
+
+		//////
+		// Deal with cases where it's an ENVIRONMENT.
+		//////
+
 		if repository != nil {
-			if _, err := v.client.Put(
-				ctx,
-				fmt.Sprintf(
-					"https://api.github.com/repositories/%d/environments/%s/secrets/%s",
+			finalURL = fmt.Sprintf(
+				"https://api.github.com/repositories/%d/environments/%s/secrets/%s",
+				repository.ID,
+				options.Environment,
+				key,
+			)
+
+			finalReqBody = httpclient.WithReqBody(secretRequest)
+
+			finalVerb = http.MethodPut
+
+			//////
+			// Deal with cases where it's an ENVIRONMENT AND a VARIABLE.
+			//////
+
+			if options.Variable {
+				finalURL = fmt.Sprintf(
+					"https://api.github.com/repositories/%d/environments/%s/variables",
 					repository.ID,
 					options.Environment,
-					key,
-				),
-				httpclient.WithReqBody(secretsRequest),
-			); err != nil {
+				)
+
+				finalReqBody = httpclient.WithReqBody(variableRequest)
+
+				finalVerb = http.MethodPost
+			}
+		}
+
+		if finalVerb == http.MethodPost {
+			resp, err := v.client.Post(ctx, finalURL, finalReqBody)
+			if err != nil {
 				return false, err
 			}
 
-			return false, nil
+			defer resp.Body.Close()
+
+			return true, nil
 		}
 
-		if _, err := v.client.Put(
+		resp, err := v.client.Put(
 			ctx,
-			fmt.Sprintf(
-				"https://api.github.com/repos/%s/%s/actions/secrets/%s",
-				v.Owner,
-				v.Repo,
-				key,
-			),
-			httpclient.WithReqBody(secretsRequest),
-		); err != nil {
+			finalURL,
+			finalReqBody,
+		)
+		if err != nil {
 			return false, err
 		}
+
+		defer resp.Body.Close()
 
 		return true, nil
 	},
@@ -213,7 +345,7 @@ func (v *GitHub) Write(ctx context.Context, values map[string]interface{}, opts 
 func New(
 	override bool,
 	owner, repo string,
-) (provider.IProvider, error) {
+) (*GitHub, error) {
 	provider, err := provider.New(Name, override)
 	if err != nil {
 		return nil, err

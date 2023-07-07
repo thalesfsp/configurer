@@ -16,10 +16,11 @@ require (
 	github.com/pelletier/go-toml v1.9.5
 	github.com/spf13/cobra v1.7.0
 	github.com/stretchr/testify v1.8.4
-	github.com/thalesfsp/concurrentloop v1.2.2
+	github.com/thalesfsp/concurrentloop v1.2.4
 	github.com/thalesfsp/customerror v1.2.1
+	github.com/thalesfsp/go-common-types v0.2.4
 	github.com/thalesfsp/godotenv v1.4.2
-	github.com/thalesfsp/httpclient v1.0.13
+	github.com/thalesfsp/httpclient v1.0.14
 	github.com/thalesfsp/validation v0.0.3
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -31,7 +32,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/eapache/go-resiliency v1.3.0 // indirect
 	github.com/elastic/elastic-transport-go/v8 v8.3.0 // indirect
-	github.com/elastic/go-elasticsearch/v8 v8.8.1 // indirect
+	github.com/elastic/go-elasticsearch/v8 v8.8.2 // indirect
 	github.com/elastic/go-licenser v0.4.1 // indirect
 	github.com/elastic/go-sysinfo v1.11.0 // indirect
 	github.com/elastic/go-windows v1.0.1 // indirect
@@ -49,9 +50,9 @@ require (
 	go.elastic.co/apm v1.15.0 // indirect
 	go.elastic.co/fastjson v1.3.0 // indirect
 	golang.org/x/lint v0.0.0-20210508222113-6edffad5e616 // indirect
-	golang.org/x/mod v0.11.0 // indirect
+	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/sync v0.3.0 // indirect
-	golang.org/x/tools v0.10.0 // indirect
+	golang.org/x/tools v0.11.0 // indirect
 	howett.net/plist v1.0.0 // indirect
 )
 
@@ -79,9 +80,9 @@ require (
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/thalesfsp/sypl v1.9.16
-	golang.org/x/crypto v0.10.0
-	golang.org/x/net v0.11.0 // indirect
-	golang.org/x/sys v0.9.0 // indirect
-	golang.org/x/text v0.10.0 // indirect
+	golang.org/x/crypto v0.11.0
+	golang.org/x/net v0.12.0 // indirect
+	golang.org/x/sys v0.10.0 // indirect
+	golang.org/x/text v0.11.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 )

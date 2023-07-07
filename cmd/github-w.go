@@ -8,12 +8,13 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/thalesfsp/configurer/github"
-	"github.com/thalesfsp/configurer/internal/logging"
-	"github.com/thalesfsp/configurer/parsers/env"
-	"github.com/thalesfsp/sypl/level"
+	"github.com/thalesfsp/configurer/option"
 )
 
-var environment, owner, repo string
+var (
+	environment, owner, repo string
+	variable                 bool
+)
 
 // githubWCmd represents the env command.
 var githubWCmd = &cobra.Command{
@@ -24,11 +25,17 @@ var githubWCmd = &cobra.Command{
 	Long: `GitHub provider will write secrets to GitHub Secrets
 
 The following environment variables can be used to configure the provider:
-- GITHUB_TOKEN: The token to use for authentication.`,
+- GITHUB_TOKEN: The token to use for authentication.
+
+NOTES: 
+- Your token needs to have write access to the repository AND be able
+to read your public key.
+- If you are using "environment" flag, you need to create the environment.
+`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if logging.Get().AnyMaxLevel(level.Debug) {
-			logging.Get().Breakpoint(env.Name)
-		}
+		// if logging.Get().Level() == level.Debug {
+		// logging.Get().Breakpoint("hahah")
+		// }
 
 		// Context with timeout.
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -49,7 +56,17 @@ The following environment variables can be used to configure the provider:
 			log.Fatalln(err)
 		}
 
-		if err := p.Write(ctx, parsedFile); err != nil {
+		var opts []option.WriteFunc
+
+		if environment != "" {
+			opts = append(opts, option.WithEnvironment(environment))
+		}
+
+		if variable {
+			opts = append(opts, option.WithVariable(variable))
+		}
+
+		if err := p.Write(ctx, parsedFile, opts...); err != nil {
 			log.Fatalln(err)
 		}
 
@@ -62,7 +79,8 @@ func init() {
 
 	githubWCmd.Flags().StringVarP(&owner, "owner", "o", "", "owner of the repository")
 	githubWCmd.Flags().StringVarP(&repo, "repo", "p", "", "repository name")
-	githubWCmd.Flags().StringVarP(&environment, "environment", "e", "", "environment to write secrets")
+	githubWCmd.Flags().StringVar(&environment, "environment", "", "environment to write secrets")
+	githubWCmd.Flags().BoolVar(&variable, "variable", false, "variable to write secrets")
 
 	githubWCmd.MarkFlagRequired("owner")
 	githubWCmd.MarkFlagRequired("repo")

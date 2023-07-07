@@ -9,6 +9,9 @@ import (
 type Write struct {
 	// Environment is the environment to be used.
 	Environment string
+
+	// Variable indicates it's a variable instead of secret.
+	Variable bool
 }
 
 // WriteFunc allows to specify loading options.
@@ -22,6 +25,15 @@ func WithEnvironment(environment string) WriteFunc {
 		}
 
 		o.Environment = environment
+
+		return nil
+	}
+}
+
+// WithVariable specifies that it's a variable instead of secret to be used.
+func WithVariable(variable bool) WriteFunc {
+	return func(o *Write) error {
+		o.Variable = variable
 
 		return nil
 	}
