@@ -360,6 +360,18 @@ func parseValue(t reflect.Type, str string) (interface{}, error) {
 
 //nolint:unparam
 func setValueFromTag(v reflect.Value, field reflect.StructField, tag string, content string, override bool) error {
+	if v.Kind() == reflect.Ptr {
+		if v.IsNil() {
+			if v.Type().Elem().Kind() == reflect.Struct {
+				return nil // Skip nil pointers to structs
+			}
+
+			v.Set(reflect.New(v.Type().Elem()))
+		}
+
+		v = v.Elem()
+	}
+
 	if tag == "" {
 		return nil
 	}
@@ -369,7 +381,7 @@ func setValueFromTag(v reflect.Value, field reflect.StructField, tag string, con
 	}
 
 	// Should set the value if override is true or the value is zero.
-	if !override && !v.IsZero() {
+	if !override && (!v.IsZero() || (v.Kind() == reflect.Ptr && !v.IsNil())) {
 		return nil
 	}
 
@@ -433,6 +445,13 @@ func process(tagName string, s any, cb Func) error {
 		}
 
 		value := v.Field(i)
+
+		// If the field is a pointer and it's nil, allocate memory for it
+		if value.Kind() == reflect.Ptr && value.IsNil() {
+			if value.Type().Elem().Kind() != reflect.Struct {
+				value.Set(reflect.New(value.Type().Elem()))
+			}
+		}
 
 		customtag := field.Tag.Get(tagName)
 

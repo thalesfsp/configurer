@@ -470,18 +470,20 @@ func TestProcess_notExported(t *testing.T) {
 
 func TestProcess_StructKeyPointer(t *testing.T) {
 	type TestStruct struct {
-		E *int `json:"E" default:"42"`
+		A *string  `json:"A" default:"42"`
+		B *float32 `json:"B" default:"42"`
+		C *float64 `json:"C" default:"42"`
+		D *bool    `json:"D" default:"true"`
+		E *int     `json:"E" default:"42"`
 	}
-
-	eValue := 42
 
 	ts := &TestStruct{}
 
-	err := Process(ts)
+	assert.NoError(t, Process(ts))
 
-	assert.NoError(t, err)
-
-	assert.EqualValues(t, eValue, ts.E)
-
-	t.Log(ts.E, &ts.E, *ts.E)
+	assert.EqualValues(t, "42", *ts.A)
+	assert.EqualValues(t, float32(42), *ts.B)
+	assert.EqualValues(t, float64(42), *ts.C)
+	assert.EqualValues(t, true, *ts.D)
+	assert.EqualValues(t, 42, *ts.E)
 }
