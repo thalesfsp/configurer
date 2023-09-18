@@ -448,8 +448,10 @@ func process(tagName string, s any, cb Func) error {
 		if value.Kind() == reflect.Ptr && !value.IsNil() {
 			elem := value.Elem()
 
-			if err := process(tagName, elem.Addr().Interface(), cb); err != nil {
-				return err
+			if elem.Kind() == reflect.Struct {
+				if err := process(tagName, value.Interface(), cb); err != nil {
+					return err
+				}
 			}
 		} else if value.Kind() == reflect.Struct {
 			if err := process(tagName, value.Addr().Interface(), cb); err != nil {

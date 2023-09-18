@@ -467,3 +467,21 @@ func TestProcess_notExported(t *testing.T) {
 		},
 	}, ts)
 }
+
+func TestProcess_StructKeyPointer(t *testing.T) {
+	type TestStruct struct {
+		E *int `json:"E" default:"42"`
+	}
+
+	eValue := 42
+
+	ts := &TestStruct{}
+
+	err := Process(ts)
+
+	assert.NoError(t, err)
+
+	assert.EqualValues(t, eValue, ts.E)
+
+	t.Log(ts.E, &ts.E, *ts.E)
+}
