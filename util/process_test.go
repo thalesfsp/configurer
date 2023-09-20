@@ -475,6 +475,7 @@ func TestProcess_StructKeyPointer(t *testing.T) {
 		C *float64 `json:"C" default:"42"`
 		D *bool    `json:"D" default:"true"`
 		E *int     `json:"E" default:"42"`
+		F *int     `json:"F"`
 	}
 
 	ts := &TestStruct{}
@@ -486,4 +487,5 @@ func TestProcess_StructKeyPointer(t *testing.T) {
 	assert.EqualValues(t, float64(42), *ts.C)
 	assert.EqualValues(t, true, *ts.D)
 	assert.EqualValues(t, 42, *ts.E)
+	assert.Nil(t, ts.F)
 }
