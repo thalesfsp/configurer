@@ -446,13 +446,6 @@ func process(tagName string, s any, cb Func) error {
 
 		value := v.Field(i)
 
-		// If the field is a pointer and it's nil, allocate memory for it
-		if value.Kind() == reflect.Ptr && value.IsNil() {
-			if value.Type().Elem().Kind() != reflect.Struct {
-				value.Set(reflect.New(value.Type().Elem()))
-			}
-		}
-
 		customtag := field.Tag.Get(tagName)
 
 		// Skip ignored fields like `json:"-"`.
