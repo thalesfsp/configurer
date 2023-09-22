@@ -73,6 +73,13 @@ func init() {
 		"Set the key prefix",
 	)
 
+	loadCmd.PersistentFlags().StringVar(
+		&keyPrefixerOptions,
+		"key-suffixer",
+		"",
+		"Set the key suffix",
+	)
+
 	loadCmd.SetUsageTemplate(`Usage:{{if .Runnable}}
   {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
   {{.CommandPath}} [provider]{{end}}{{if gt (len .Aliases) 0}}
