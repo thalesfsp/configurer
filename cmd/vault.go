@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/thalesfsp/configurer/option"
 	"github.com/thalesfsp/configurer/vault"
 )
 
@@ -116,7 +117,21 @@ more secure.
 			log.Fatalln(err)
 		}
 
-		finalValues, err := vaultProvider.Load(context.Background())
+		var options []option.LoadKeyFunc
+
+		if keyCaserOptions != "" {
+			options = append(options, option.WithKeyCaser(keyCaserOptions))
+		}
+
+		if keyPrefixerOptions != "" {
+			options = append(options, option.WithKeyPrefixer(keyPrefixerOptions))
+		}
+
+		if keySuffixerOptions != "" {
+			options = append(options, option.WithKeySuffixer(keySuffixerOptions))
+		}
+
+		finalValues, err := vaultProvider.Load(context.Background(), options...)
 		if err != nil {
 			log.Fatalln(err)
 		}

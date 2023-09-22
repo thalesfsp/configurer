@@ -37,6 +37,15 @@ func TestNoOp_Load(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "should work with options",
+			opts: []option.LoadKeyFunc{
+				option.WithKeyCaser("upper"),
+				option.WithKeySuffixer("_HAHAHA"),
+			},
+			wantKey: "TEST_KEY_HAHAHA",
+			wantErr: false,
+		},
+		{
 			name: "should work with options - replacer",
 			opts: []option.LoadKeyFunc{
 				option.WithKeyReplacer(func(key string) string {

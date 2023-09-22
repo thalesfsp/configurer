@@ -64,6 +64,10 @@ NOTE: Double dash (--) have precedence over the "-c" flag.
 			options = append(options, option.WithKeyPrefixer(keyPrefixerOptions))
 		}
 
+		if keySuffixerOptions != "" {
+			options = append(options, option.WithKeySuffixer(keySuffixerOptions))
+		}
+
 		finalValues, err := dotEnvProvider.Load(context.Background(), options...)
 		if err != nil {
 			log.Fatalln(err)

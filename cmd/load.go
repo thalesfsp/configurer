@@ -13,6 +13,7 @@ var (
 	dumpFilename       string
 	keyCaserOptions    string
 	keyPrefixerOptions string
+	keySuffixerOptions string
 	shutdownTimeout    time.Duration
 )
 

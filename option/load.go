@@ -38,6 +38,13 @@ func WithKeyPrefixer(prefix string) LoadKeyFunc {
 	}
 }
 
+// WithKeySuffixer adds a suffix to the key.
+func WithKeySuffixer(suffix string) LoadKeyFunc {
+	return func(key string) string {
+		return fmt.Sprintf("%s%s", key, suffix)
+	}
+}
+
 // WithKeyCaser changes the case of the key using the `strcase` package.
 //
 // SEE: github.com/iancoleman/strcase.
