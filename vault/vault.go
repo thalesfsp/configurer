@@ -68,11 +68,11 @@ type SecretInformation struct {
 
 // Vault provider definition.
 type Vault struct {
-	client             *vault.Client `json:"-" validate:"required,dive"`
+	client             *vault.Client `json:"-" validate:"required"`
 	*provider.Provider `json:"-" validate:"required"`
 
-	*Auth              `json:"-" validate:"required,dive"`
-	*SecretInformation `json:"-" validate:"required,dive"`
+	*Auth              `json:"-" validate:"required"`
+	*SecretInformation `json:"-" validate:"required"`
 }
 
 // Load retrieves the configuration, and exports it to the environment.
