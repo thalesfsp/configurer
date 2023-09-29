@@ -148,15 +148,13 @@ info "Unpacking archive"
 tar -xzf "$tmp_dir/$APP_NAME.tar.gz" -C "$tmp_dir"
 
 # Move the binary to BIN_DIR, use sudo only if necessary.
+# Move the binary to BIN_DIR, use sudo only if necessary.
 if [ -w "$BIN_DIR" ]; then
   info "Moving binary to $BIN_DIR"
   mv "$tmp_dir/$APP_NAME" "$BIN_DIR"
 else
-  if [ -z "$SUDO" ]; then
-    error_exit "Cannot write to $BIN_DIR. Consider running the script with elevated privileges."
-  fi
   info "Moving binary to $BIN_DIR using sudo"
-  $SUDO mv "$tmp_dir/$APP_NAME" "$BIN_DIR"
+  sudo mv "$tmp_dir/$APP_NAME" "$BIN_DIR"
 fi
 
 # Notify the user of successful installation.
