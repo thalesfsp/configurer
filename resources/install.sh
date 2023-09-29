@@ -13,7 +13,7 @@
 
 ORG_NAME="thalesfsp"
 APP_NAME="configurer"
-BIN_DIR="/usr/local/bin"
+BIN_DIR="${BIN_DIR:-/usr/local/bin}"
 
 # Replace BIN_DIR with args if provided.
 if [ $# -gt 0 ]; then
