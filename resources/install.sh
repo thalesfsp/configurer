@@ -1,5 +1,4 @@
 #!/usr/bin/env sh
-set -euo pipefail
 
 ######
 # Improved script to download the latest release from GitHub and install it at /usr/local/bin.
