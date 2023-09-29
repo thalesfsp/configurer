@@ -75,6 +75,14 @@ check_dependency tar
 check_dependency mktemp
 check_dependency uname
 
+# Check if sudo is available
+if has "sudo"; then
+  SUDO="sudo"
+else
+  SUDO=""
+  warn "sudo not found. Please run the script with appropriate permissions if required."
+fi
+
 # Get the latest release version from GitHub.
 version=$(curl -s https://api.github.com/repos/${ORG_NAME}/${APP_NAME}/releases/latest | grep tag_name | cut -d '"' -f 4)
 
@@ -144,8 +152,11 @@ if [ -w "$BIN_DIR" ]; then
   info "Moving binary to $BIN_DIR"
   mv "$tmp_dir/$APP_NAME" "$BIN_DIR"
 else
+  if [ -z "$SUDO" ]; then
+    error_exit "Cannot write to $BIN_DIR. Consider running the script with elevated privileges."
+  fi
   info "Moving binary to $BIN_DIR using sudo"
-  sudo mv "$tmp_dir/$APP_NAME" "$BIN_DIR"
+  $SUDO mv "$tmp_dir/$APP_NAME" "$BIN_DIR"
 fi
 
 # Notify the user of successful installation.
