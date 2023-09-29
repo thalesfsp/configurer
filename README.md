@@ -8,13 +8,17 @@
 
 Install using go install:
 
-`$ curl -s https://raw.githubusercontent.com/thalesfsp/configurer/main/resources/install.sh | sh`
+`curl -s https://raw.githubusercontent.com/thalesfsp/configurer/main/resources/install.sh | sh`
+
+Setting target destination:
+
+`curl -s https://raw.githubusercontent.com/thalesfsp/configurer/main/resources/install.sh BIN_DIR=ABSOLUTE_DIR_PATH | sh`
 
 ### Programatically
 
 Install dependency:
 
-`$ go get github.com/thalesfsp/configurer`
+`go get github.com/thalesfsp/configurer`
 
 ## Usage
 
