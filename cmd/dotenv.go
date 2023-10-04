@@ -87,16 +87,18 @@ NOTE: Double dash (--) have precedence over the "-c" flag.
 			}
 		}
 
-		errored := false
+		if len(args) > 0 {
+			errored := false
 
-		for _, exitCode := range ConcurrentRunner(dotEnvProvider, commands, args) {
-			if exitCode != 0 {
-				errored = true
+			for _, exitCode := range ConcurrentRunner(dotEnvProvider, commands, args) {
+				if exitCode != 0 {
+					errored = true
+				}
 			}
-		}
 
-		if errored {
-			os.Exit(1)
+			if errored {
+				os.Exit(1)
+			}
 		}
 
 		os.Exit(0)

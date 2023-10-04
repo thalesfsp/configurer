@@ -13,7 +13,6 @@ import (
 // vaultCmd represents the vault command.
 var vaultCmd = &cobra.Command{
 	Aliases: []string{"v"},
-	Args:    cobra.MinimumNArgs(1),
 	Short:   "Vault provider",
 	Use:     "vault",
 	Example: "  configurer l v -a https://v.co -t 123 -m secret -p config -- env | grep PWD",
@@ -150,16 +149,18 @@ more secure.
 			}
 		}
 
-		errored := false
+		if len(args) > 0 {
+			errored := false
 
-		for _, exitCode := range ConcurrentRunner(vaultProvider, commands, args) {
-			if exitCode != 0 {
-				errored = true
+			for _, exitCode := range ConcurrentRunner(vaultProvider, commands, args) {
+				if exitCode != 0 {
+					errored = true
+				}
 			}
-		}
 
-		if errored {
-			os.Exit(1)
+			if errored {
+				os.Exit(1)
+			}
 		}
 
 		os.Exit(0)
