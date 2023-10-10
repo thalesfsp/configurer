@@ -63,8 +63,9 @@ check_dependency mktemp
 check_dependency uname
 
 # Check if sudo is available and provide a warning if not
-SUDO=""
-[ ! has "sudo" ] && warn "sudo not found. Please run the script with appropriate permissions if required."
+if ! has "sudo"; then
+    warn "sudo not found. Please run the script with appropriate permissions if required."
+fi
 
 # Get the latest release version from GitHub.
 version=$(curl -s https://api.github.com/repos/${ORG_NAME}/${APP_NAME}/releases/latest | grep tag_name | cut -d '"' -f 4)
