@@ -4,7 +4,6 @@
 # Improved script to download the latest release from GitHub and install it at /usr/local/bin.
 #
 # Author: Thales Pinheiro
-# Improved by: ChatGPT
 ######
 
 ######
@@ -38,31 +37,20 @@ error_exit() {
   exit 1
 }
 
-trap 'error_exit "An error occurred. Exiting..."' ERR
+clean_up() {
+  info "Cleaning up temporary directory: $tmp_dir"
+  rm -rf "$tmp_dir"
+}
+
+trap clean_up EXIT
 
 check_dependency() {
   command -v "$1" >/dev/null 2>&1 || error_exit "Command not found: $1"
 }
 
-clean_up() {
-  info "Cleaning up temporary directory: $tmp_dir"
-  rm -rf "$tmp_dir"
-}
-trap clean_up EXIT
-
 has() {
   command -v "$1" 1>/dev/null 2>&1
 }
-
-BOLD="$(tput bold 2>/dev/null || printf '')"
-GREY="$(tput setaf 0 2>/dev/null || printf '')"
-UNDERLINE="$(tput smul 2>/dev/null || printf '')"
-RED="$(tput setaf 1 2>/dev/null || printf '')"
-GREEN="$(tput setaf 2 2>/dev/null || printf '')"
-YELLOW="$(tput setaf 3 2>/dev/null || printf '')"
-BLUE="$(tput setaf 4 2>/dev/null || printf '')"
-MAGENTA="$(tput setaf 5 2>/dev/null || printf '')"
-NO_COLOR="$(tput sgr0 2>/dev/null || printf '')"
 
 ######
 # Main Execution
@@ -74,13 +62,9 @@ check_dependency tar
 check_dependency mktemp
 check_dependency uname
 
-# Check if sudo is available
-if has "sudo"; then
-  SUDO="sudo"
-else
-  SUDO=""
-  warn "sudo not found. Please run the script with appropriate permissions if required."
-fi
+# Check if sudo is available and provide a warning if not
+SUDO=""
+[ ! has "sudo" ] && warn "sudo not found. Please run the script with appropriate permissions if required."
 
 # Get the latest release version from GitHub.
 version=$(curl -s https://api.github.com/repos/${ORG_NAME}/${APP_NAME}/releases/latest | grep tag_name | cut -d '"' -f 4)
@@ -133,10 +117,10 @@ final_url=$(printf "https://github.com/%s/%s/releases/download/%s/%s_%s_%s_%s.ta
 # Create a temp directory.
 tmp_dir=$(mktemp -d)
 
-info "Architecture: ${UNDERLINE}${BLUE}$arch${NO_COLOR}"
-info "OS: ${UNDERLINE}${BLUE}$os${NO_COLOR}"
-info "Temporary Filepath: ${UNDERLINE}${BLUE}$tmp_dir/$APP_NAME.tar.gz${NO_COLOR}"
-info "Tarball URL: ${UNDERLINE}${BLUE}${final_url}${NO_COLOR}"
+info "Architecture: $arch"
+info "OS: $os"
+info "Temporary Filepath: $tmp_dir/$APP_NAME.tar.gz"
+info "Tarball URL: $final_url"
 
 # Download the latest release using fetcher
 info "Downloading $final_url"
@@ -147,13 +131,12 @@ info "Unpacking archive"
 tar -xzf "$tmp_dir/$APP_NAME.tar.gz" -C "$tmp_dir"
 
 # Move the binary to BIN_DIR, use sudo only if necessary.
-# Move the binary to BIN_DIR, use sudo only if necessary.
 if [ -w "$BIN_DIR" ]; then
   info "Moving binary to $BIN_DIR"
   mv "$tmp_dir/$APP_NAME" "$BIN_DIR"
 else
   info "Moving binary to $BIN_DIR using sudo"
-  sudo mv "$tmp_dir/$APP_NAME" "$BIN_DIR"
+  $SUDO mv "$tmp_dir/$APP_NAME" "$BIN_DIR"
 fi
 
 # Notify the user of successful installation.
