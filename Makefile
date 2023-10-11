@@ -25,6 +25,9 @@ default: ci
 build:
 	@go build -o $(BIN_PATH) && echo "Build OK"
 
+build-debug:
+	@go build -gcflags="all=-N -l" -o $(BIN_PATH) && echo "Build OK"
+
 ci: lint test coverage
 ci-integration: lint test-integration coverage
 
