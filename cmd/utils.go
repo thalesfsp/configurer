@@ -8,10 +8,10 @@ import (
 	"os/signal"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/kvz/logstreamer"
+	"github.com/thalesfsp/concurrentloop"
 	"github.com/thalesfsp/configurer/parsers/env"
 	"github.com/thalesfsp/configurer/parsers/jsonp"
 	"github.com/thalesfsp/configurer/parsers/toml"
@@ -21,6 +21,15 @@ import (
 	"github.com/thalesfsp/sypl"
 	"github.com/thalesfsp/sypl/level"
 )
+
+// CommandArgs represents the command and its arguments.
+type CommandArgs struct {
+	// Arguments to pass to the command.
+	Args []string `json:"args"`
+
+	// Command to run.
+	Command string `json:"command"`
+}
 
 // Splits the command from the arguments.
 func splitCmdFromArgs(args []string) (string, []string) {
@@ -114,43 +123,44 @@ func runCommand(
 }
 
 // ConcurrentRunner runs the commands concurrently.
-func ConcurrentRunner(p provider.IProvider, cmds []string, args []string) []int {
-	var wg sync.WaitGroup
-
-	exitCodes := make([]int, 0)
-
+func ConcurrentRunner(p provider.IProvider, cmds []string, args []string) {
 	if len(cmds) == 0 {
-		wg.Add(1)
-
 		command, arguments := splitCmdFromArgs(args)
 
-		exitCodes = append(exitCodes, runCommand(p, command, arguments, false))
-
-		wg.Done()
-	} else {
-		// Iterate over the commands and run them concurrently. WAIT for all
-		// of them to finish before exiting, then exit the application.
-		for _, command := range cmds {
-			command := command
-
-			wg.Add(1)
-
-			// Split command from arguments.
-			cmdArgs := strings.Split(command, " ")
-
-			c, a := splitCmdFromArgs(cmdArgs)
-
-			go func() {
-				exitCodes = append(exitCodes, runCommand(p, c, a, true))
-
-				wg.Done()
-			}()
-		}
+		os.Exit(runCommand(p, command, arguments, false))
 	}
 
-	wg.Wait()
+	ca := []CommandArgs{}
 
-	return exitCodes
+	for _, command := range cmds {
+		// Split command from arguments.
+		cmdArgs := strings.Split(command, " ")
+
+		c, a := splitCmdFromArgs(cmdArgs)
+
+		ca = append(ca, CommandArgs{
+			Command: c,
+			Args:    a,
+		})
+	}
+
+	if _, errs := concurrentloop.Map(context.Background(), ca, func(ctx context.Context, ca CommandArgs) (bool, error) {
+		if exitCode := runCommand(p, ca.Command, ca.Args, true); exitCode != 0 {
+			return false, customerror.NewFailedToError(
+				"run command",
+				customerror.WithField("command", ca.Command),
+				customerror.WithField("args", ca.Args),
+			)
+		}
+
+		return true, nil
+	}); len(errs) > 0 {
+		p.GetLogger().PrintlnPretty(level.Error, errs)
+
+		os.Exit(1)
+	}
+
+	os.Exit(0)
 }
 
 // DumpToFile dumps the final loaded values to a file. Extension is used to

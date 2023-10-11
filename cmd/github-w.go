@@ -8,12 +8,16 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/thalesfsp/configurer/github"
+	"github.com/thalesfsp/configurer/internal/logging"
 	"github.com/thalesfsp/configurer/option"
+	"github.com/thalesfsp/configurer/parsers/env"
+	"github.com/thalesfsp/sypl/level"
 )
 
 var (
 	environment, owner, repo string
 	variable                 bool
+	target                   string
 )
 
 // githubWCmd represents the env command.
@@ -33,9 +37,9 @@ to read your public key.
 - If you are using "environment" flag, you need to create the environment.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		// if logging.Get().Level() == level.Debug {
-		// logging.Get().Breakpoint("hahah")
-		// }
+		if logging.Get().AnyMaxLevel(level.Debug) {
+			logging.Get().Breakpoint(env.Name)
+		}
 
 		// Context with timeout.
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -66,6 +70,10 @@ to read your public key.
 			opts = append(opts, option.WithVariable(variable))
 		}
 
+		if target != "" {
+			opts = append(opts, option.WithTarget(target))
+		}
+
 		if err := p.Write(ctx, parsedFile, opts...); err != nil {
 			log.Fatalln(err)
 		}
@@ -81,6 +89,7 @@ func init() {
 	githubWCmd.Flags().StringVarP(&repo, "repo", "p", "", "repository name")
 	githubWCmd.Flags().StringVar(&environment, "environment", "", "environment to write secrets")
 	githubWCmd.Flags().BoolVar(&variable, "variable", false, "variable to write secrets")
+	githubWCmd.Flags().StringVar(&target, "target", github.Actions.String(), "target to write secrets, e.g.: codespaces, actions")
 
 	githubWCmd.MarkFlagRequired("owner")
 	githubWCmd.MarkFlagRequired("repo")

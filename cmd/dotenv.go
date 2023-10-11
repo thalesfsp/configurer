@@ -19,7 +19,7 @@ var dotEnvCmd = &cobra.Command{
 	Use:     "dotenv",
 	Example: "  configurer l d -f .env -- env | grep PWD",
 	Long: `DotEnv provider will load secrets from .env files,
-exports to the environment, and them run the specified
+exports to the environment, and them run if any, the specified
 command.
 
 ## About the command to run
@@ -31,19 +31,19 @@ If running only one command:
 parent process plus the ones loaded from the provider.
 
 NOTE: A double dash (--) is used to signify the end of command options.
-It's required to distinguish between the flags passed to Go and those
-that aren't. Everything after the double dash won't be considered to be
-Go's flags.
+      It's required to distinguish between the flags passed to Go and
+	  those that aren't. Everything after the double dash won't be
+	  considered to be Go's flags.
 
 If running multiple commands:
-Use the flag -c to specify the commands to run. The commands must be
-comma separated. The commands will be run concurrently.
-Example: configurer l d -f testing.env -c "pwd,ls -la,env"
+Use as many -c flags you want, to specify the commands to run.
+The commands will be run concurrently.
+Example: configurer l d -f testing.env -c "pwd" -c "ls -la" -c "env"
 
 NOTE: Already exported environment variables have precedence over loaded
-ones. Set the overwrite flag to true to override them.
+	  ones. Set the overwrite flag to true to override them.
 
-NOTE: Double dash (--) have precedence over the "-c" flag.
+NOTE: The "-c" flag have precedence over double dash (--)
 `,
 	Run: func(cmd *cobra.Command, args []string) {
 		// Should be able to override current environment variables.
@@ -87,21 +87,7 @@ NOTE: Double dash (--) have precedence over the "-c" flag.
 			}
 		}
 
-		if len(args) > 0 {
-			errored := false
-
-			for _, exitCode := range ConcurrentRunner(dotEnvProvider, commands, args) {
-				if exitCode != 0 {
-					errored = true
-				}
-			}
-
-			if errored {
-				os.Exit(1)
-			}
-		}
-
-		os.Exit(0)
+		ConcurrentRunner(dotEnvProvider, commands, args)
 	},
 }
 
