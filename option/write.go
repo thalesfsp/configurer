@@ -10,6 +10,9 @@ type Write struct {
 	// Environment is the environment to be used.
 	Environment string
 
+	// Target to write configuration. Default is "action".
+	Target string
+
 	// Variable indicates it's a variable instead of secret.
 	Variable bool
 }
@@ -34,6 +37,18 @@ func WithEnvironment(environment string) WriteFunc {
 func WithVariable(variable bool) WriteFunc {
 	return func(o *Write) error {
 		o.Variable = variable
+
+		return nil
+	}
+}
+
+func WithTarget(target string) WriteFunc {
+	return func(o *Write) error {
+		if target == "" {
+			return customerror.NewInvalidError("target, can't be empty")
+		}
+
+		o.Target = target
 
 		return nil
 	}
