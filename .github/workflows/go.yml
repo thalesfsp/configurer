@@ -1,4 +1,4 @@
-# Copyright 2022 The sypl Authors. All rights reserved.
+# Copyright 2022 The configurer Authors. All rights reserved.
 # Use of this source code is governed by a MIT
 # license that can be found in the LICENSE file.
 
@@ -28,7 +28,6 @@ jobs:
         with:
           version: v1.51.2
           args: --timeout 10m -v -c .golangci.yml
-          skip-go-installation: true
           
       - name: Lint
         run: golangci-lint run -v -c .golangci.yml

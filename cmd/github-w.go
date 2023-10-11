@@ -8,10 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/thalesfsp/configurer/github"
-	"github.com/thalesfsp/configurer/internal/logging"
 	"github.com/thalesfsp/configurer/option"
-	"github.com/thalesfsp/configurer/parsers/env"
-	"github.com/thalesfsp/sypl/level"
 )
 
 var (
@@ -37,10 +34,6 @@ to read your public key.
 - If you are using "environment" flag, you need to create the environment.
 `,
 	Run: func(cmd *cobra.Command, args []string) {
-		if logging.Get().AnyMaxLevel(level.Debug) {
-			logging.Get().Breakpoint(env.Name)
-		}
-
 		// Context with timeout.
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()

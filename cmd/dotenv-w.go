@@ -8,9 +8,6 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/thalesfsp/configurer/dotenv"
-	"github.com/thalesfsp/configurer/internal/logging"
-	"github.com/thalesfsp/configurer/parsers/env"
-	"github.com/thalesfsp/sypl/level"
 )
 
 var targetFilename string
@@ -23,10 +20,6 @@ var dotEnvWCmd = &cobra.Command{
 	Example: "  configurer w --source prod.env l --target .env",
 	Long:    "DotEnv provider will write secrets to a `*.env` file",
 	Run: func(cmd *cobra.Command, args []string) {
-		if logging.Get().AnyMaxLevel(level.Debug) {
-			logging.Get().Breakpoint(env.Name)
-		}
-
 		// Context with timeout.
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()

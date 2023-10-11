@@ -41,3 +41,6 @@ vendor/
 # scratch repo to hack
 /scratch
 coverage.out
+
+resources/codespaces/
+resources/config/

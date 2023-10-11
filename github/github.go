@@ -136,7 +136,7 @@ func retrieveKey(
 	owner, repo string,
 	target Target,
 ) (*PublicKeyResponse, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
 	var publicKeyResponse PublicKeyResponse
@@ -297,6 +297,7 @@ func (v *GitHub) Write(ctx context.Context, values map[string]interface{}, opts 
 		concurrentloop.WithBatchSize(10),
 		concurrentloop.WithRandomDelayTime(100, 700, time.Millisecond),
 	)
+
 	return err
 }
 
@@ -308,22 +309,43 @@ func (v *GitHub) constructRequestDetails(
 	secretRequest *SecretRequest,
 ) (string, string, httpclient.Func) {
 	finalVerb := http.MethodPut
-	finalURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/%s/secrets/%s", v.Owner, v.Repo, options.Target, key)
+	finalURL := fmt.Sprintf(
+		"https://api.github.com/repos/%s/%s/%s/secrets/%s",
+		v.Owner,
+		v.Repo,
+		options.Target,
+		key,
+	)
 	finalReqBody := httpclient.WithReqBody(secretRequest)
 
 	if options.Variable {
-		finalURL = fmt.Sprintf("https://api.github.com/repos/%s/%s/%s/variables", v.Owner, v.Repo, options.Target)
+		finalURL = fmt.Sprintf(
+			"https://api.github.com/repos/%s/%s/%s/variables",
+			v.Owner,
+			v.Repo,
+			options.Target,
+		)
+
 		finalReqBody = httpclient.WithReqBody(variableRequest)
 		finalVerb = http.MethodPost
 	}
 
 	if repository != nil {
-		finalURL = fmt.Sprintf("https://api.github.com/repositories/%d/environments/%s/secrets/%s", repository.ID, options.Environment, key)
+		finalURL = fmt.Sprintf(
+			"https://api.github.com/repositories/%d/environments/%s/secrets/%s",
+			repository.ID,
+			options.Environment,
+			key,
+		)
 		finalReqBody = httpclient.WithReqBody(secretRequest)
 		finalVerb = http.MethodPut
 
 		if options.Variable {
-			finalURL = fmt.Sprintf("https://api.github.com/repositories/%d/environments/%s/variables", repository.ID, options.Environment)
+			finalURL = fmt.Sprintf(
+				"https://api.github.com/repositories/%d/environments/%s/variables",
+				repository.ID,
+				options.Environment,
+			)
 			finalReqBody = httpclient.WithReqBody(variableRequest)
 			finalVerb = http.MethodPost
 		}

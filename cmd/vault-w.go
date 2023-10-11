@@ -7,9 +7,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/thalesfsp/configurer/internal/logging"
 	"github.com/thalesfsp/configurer/vault"
-	"github.com/thalesfsp/sypl/level"
 )
 
 // vaultWCmd represents the vault command.
@@ -32,10 +30,6 @@ The following environment variables can be used to configure the provider:
 
 NOTE: If no app role is set, the provider will default to using token.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		if logging.Get().AnyMaxLevel(level.Debug) {
-			logging.Get().Breakpoint(vault.Name)
-		}
-
 		// Context with timeout.
 		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 		defer cancel()
