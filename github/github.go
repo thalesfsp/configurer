@@ -25,6 +25,22 @@ import (
 // Name of the provider.
 const Name = "github"
 
+// Target of the request.
+type Target string
+
+const (
+	// Actions const.
+	Actions Target = "actions"
+
+	// Codespaces const.
+	Codespaces Target = "codespaces"
+)
+
+// String implements the Stringer interface.
+func (t Target) String() string {
+	return string(t)
+}
+
 // Config is an alias to GitHub configuration.
 // type Config = *github.Config
 
@@ -62,7 +78,8 @@ type Repository struct {
 type GitHub struct {
 	*provider.Provider `json:"-" validate:"required"`
 
-	*PublicKeyResponse `json:"-" validate:"required"`
+	publicKeyResponseActions   *PublicKeyResponse `json:"-" validate:"required"`
+	publicKeyResponseCodespace *PublicKeyResponse `json:"-" validate:"required"`
 
 	Owner string `json:"owner" validate:"required"`
 	Repo  string `json:"repo" validate:"required"`
@@ -110,6 +127,32 @@ func encrypt(publicKey, secret string) (string, error) {
 
 	// Encode the encrypted secret to base64
 	return base64.StdEncoding.EncodeToString(encrypted), nil
+}
+
+// RetrieveKey retrieves the public key to sign the data.
+func retrieveKey(
+	ctx context.Context,
+	c *httpclient.Client,
+	owner, repo string,
+	target Target,
+) (*PublicKeyResponse, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+
+	var publicKeyResponse PublicKeyResponse
+
+	r, err := c.Get(
+		ctx,
+		fmt.Sprintf("https://api.github.com/repos/%s/%s/%s/secrets/public-key", owner, repo, target),
+		httpclient.WithRespBody(&publicKeyResponse),
+	)
+	if err != nil {
+		return nil, customerror.NewRequiredError("publicKey information")
+	}
+
+	defer r.Body.Close()
+
+	return &publicKeyResponse, nil
 }
 
 // GetRepository retrieves the repository information.
@@ -198,12 +241,10 @@ func (v *GitHub) Load(ctx context.Context, opts ...option.LoadKeyFunc) (map[stri
 //
 // NOTE: Not all providers support writing secrets.
 func (v *GitHub) Write(ctx context.Context, values map[string]interface{}, opts ...option.WriteFunc) error {
-	// Ensure the secret values are not nil.
 	if values == nil {
 		return customerror.NewRequiredError("values")
 	}
 
-	// Process the options.
 	var options option.Write
 
 	for _, opt := range opts {
@@ -223,118 +264,102 @@ func (v *GitHub) Write(ctx context.Context, values map[string]interface{}, opts 
 		repository = repo
 	}
 
-	// Write the secrets.
-	if _, err := concurrentloop.MapM(ctx, values, func(ctx context.Context, key string, item any) (bool, error) {
+	_, err := concurrentloop.MapM(ctx, values, func(ctx context.Context, key string, item any) (bool, error) {
 		variableRequest := &VariableRequest{
 			Name:  key,
 			Value: fmt.Sprintf("%v", item),
 		}
 
-		encryptedValue, err := encrypt(v.PublicKeyResponse.Key, fmt.Sprintf("%v", item))
+		encryptedValue, err := encrypt(v.publicKeyResponseCodespace.Key, fmt.Sprintf("%v", item))
 		if err != nil {
 			return false, err
 		}
 
 		secretRequest := &SecretRequest{
 			EncryptedValue: encryptedValue,
-			KeyID:          v.PublicKeyResponse.KeyID,
+			KeyID:          v.publicKeyResponseCodespace.KeyID,
 		}
 
-		//////
-		// Default case: it's a REPOSITORY AND A SECRET.
-		//////
-
-		finalVerb := http.MethodPut
-
-		finalURL := fmt.Sprintf(
-			"https://api.github.com/repos/%s/%s/actions/secrets/%s",
-			v.Owner,
-			v.Repo,
+		finalVerb, finalURL, finalReqBody := v.constructRequestDetails(
+			options,
+			repository,
 			key,
+			variableRequest,
+			secretRequest,
 		)
-
-		finalReqBody := httpclient.WithReqBody(secretRequest)
-
-		//////
-		// Deal with cases where it's a REPOSITORY AND a VARIABLE.
-		//////
-
-		if options.Variable {
-			finalURL = fmt.Sprintf(
-				"https://api.github.com/repos/%s/%s/actions/variables",
-				v.Owner,
-				v.Repo,
-			)
-
-			finalReqBody = httpclient.WithReqBody(variableRequest)
-
-			finalVerb = http.MethodPost
-		}
-
-		//////
-		// Deal with cases where it's an ENVIRONMENT.
-		//////
-
-		if repository != nil {
-			finalURL = fmt.Sprintf(
-				"https://api.github.com/repositories/%d/environments/%s/secrets/%s",
-				repository.ID,
-				options.Environment,
-				key,
-			)
-
-			finalReqBody = httpclient.WithReqBody(secretRequest)
-
-			finalVerb = http.MethodPut
-
-			//////
-			// Deal with cases where it's an ENVIRONMENT AND a VARIABLE.
-			//////
-
-			if options.Variable {
-				finalURL = fmt.Sprintf(
-					"https://api.github.com/repositories/%d/environments/%s/variables",
-					repository.ID,
-					options.Environment,
-				)
-
-				finalReqBody = httpclient.WithReqBody(variableRequest)
-
-				finalVerb = http.MethodPost
-			}
-		}
 
 		if finalVerb == http.MethodPost {
-			resp, err := v.client.Post(ctx, finalURL, finalReqBody)
-			if err != nil {
-				return false, err
-			}
-
-			defer resp.Body.Close()
-
-			return true, nil
+			return v.executePOSTRequest(ctx, finalURL, finalReqBody)
 		}
 
-		resp, err := v.client.Put(
-			ctx,
-			finalURL,
-			finalReqBody,
-		)
-		if err != nil {
-			return false, err
-		}
-
-		defer resp.Body.Close()
-
-		return true, nil
+		return v.executePUTRequest(ctx, finalURL, finalReqBody)
 	},
 		concurrentloop.WithBatchSize(10),
 		concurrentloop.WithRandomDelayTime(100, 700, time.Millisecond),
-	); err != nil {
-		return err
+	)
+	return err
+}
+
+func (v *GitHub) constructRequestDetails(
+	options option.Write,
+	repository *Repository,
+	key string,
+	variableRequest *VariableRequest,
+	secretRequest *SecretRequest,
+) (string, string, httpclient.Func) {
+	finalVerb := http.MethodPut
+	finalURL := fmt.Sprintf("https://api.github.com/repos/%s/%s/%s/secrets/%s", v.Owner, v.Repo, options.Target, key)
+	finalReqBody := httpclient.WithReqBody(secretRequest)
+
+	if options.Variable {
+		finalURL = fmt.Sprintf("https://api.github.com/repos/%s/%s/%s/variables", v.Owner, v.Repo, options.Target)
+		finalReqBody = httpclient.WithReqBody(variableRequest)
+		finalVerb = http.MethodPost
 	}
 
-	return nil
+	if repository != nil {
+		finalURL = fmt.Sprintf("https://api.github.com/repositories/%d/environments/%s/secrets/%s", repository.ID, options.Environment, key)
+		finalReqBody = httpclient.WithReqBody(secretRequest)
+		finalVerb = http.MethodPut
+
+		if options.Variable {
+			finalURL = fmt.Sprintf("https://api.github.com/repositories/%d/environments/%s/variables", repository.ID, options.Environment)
+			finalReqBody = httpclient.WithReqBody(variableRequest)
+			finalVerb = http.MethodPost
+		}
+	}
+
+	return finalVerb, finalURL, finalReqBody
+}
+
+func (v *GitHub) executePOSTRequest(
+	ctx context.Context,
+	url string,
+	reqBody httpclient.Func,
+) (bool, error) {
+	resp, err := v.client.Post(ctx, url, reqBody)
+	if err != nil {
+		return false, err
+	}
+
+	defer resp.Body.Close()
+
+	return true, nil
+}
+
+func (v *GitHub) executePUTRequest(
+	ctx context.Context,
+	url string,
+	reqBody httpclient.Func,
+) (bool, error) {
+	resp, err := v.client.Put(ctx, url, reqBody)
+	if err != nil {
+		return false, err
+	}
+
+	defer resp.Body.Close()
+
+	return true, nil
 }
 
 //////
@@ -364,30 +389,29 @@ func New(
 
 	// Setup default headers.
 	client.Headers = map[string]string{
-		"Accept":        "application/vnd.github+json",
-		"Authorization": fmt.Sprintf("Bearer %s", token),
+		"Accept":               "application/vnd.github+json",
+		"X-GitHub-Api-Version": "2022-11-28",
+		"Authorization":        fmt.Sprintf("Bearer %s", token),
 	}
 
 	// Retrieve the public key.
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	var publicKeyResponse PublicKeyResponse
-
-	r, err := client.Get(
-		ctx,
-		fmt.Sprintf("https://api.github.com/repos/%s/%s/actions/secrets/public-key", owner, repo),
-		httpclient.WithRespBody(&publicKeyResponse),
-	)
+	publicKeyResponseActions, err := retrieveKey(ctx, client, owner, repo, Actions)
 	if err != nil {
-		return nil, customerror.NewRequiredError("publicKey information")
+		return nil, err
 	}
 
-	defer r.Body.Close()
+	publicKeyResponseCodespace, err := retrieveKey(ctx, client, owner, repo, Codespaces)
+	if err != nil {
+		return nil, err
+	}
 
 	v := &GitHub{
-		Provider:          provider,
-		PublicKeyResponse: &publicKeyResponse,
+		Provider:                   provider,
+		publicKeyResponseActions:   publicKeyResponseActions,
+		publicKeyResponseCodespace: publicKeyResponseCodespace,
 
 		Owner: owner,
 		Repo:  repo,
