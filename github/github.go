@@ -286,10 +286,15 @@ func (v *GitHub) Write(ctx context.Context, values map[string]interface{}, opts 
 			key,
 			variableRequest,
 			secretRequest,
+			options.HTTPVerb,
 		)
 
 		if finalVerb == http.MethodPost {
 			return v.executePOSTRequest(ctx, finalURL, finalReqBody)
+		}
+
+		if finalVerb == http.MethodPatch {
+			return v.executePATCHRequest(ctx, finalURL, finalReqBody)
 		}
 
 		return v.executePUTRequest(ctx, finalURL, finalReqBody)
@@ -307,6 +312,7 @@ func (v *GitHub) constructRequestDetails(
 	key string,
 	variableRequest *VariableRequest,
 	secretRequest *SecretRequest,
+	forceVerb string,
 ) (string, string, httpclient.Func) {
 	finalVerb := http.MethodPut
 	finalURL := fmt.Sprintf(
@@ -351,6 +357,21 @@ func (v *GitHub) constructRequestDetails(
 		}
 	}
 
+	if forceVerb != "" {
+		if options.Variable {
+			finalURL = fmt.Sprintf(
+				"https://api.github.com/repositories/%d/environments/%s/variables/%s",
+				repository.ID,
+				options.Environment,
+				key,
+			)
+
+			finalReqBody = httpclient.WithReqBody(variableRequest)
+		}
+
+		finalVerb = forceVerb
+	}
+
 	return finalVerb, finalURL, finalReqBody
 }
 
@@ -375,6 +396,21 @@ func (v *GitHub) executePUTRequest(
 	reqBody httpclient.Func,
 ) (bool, error) {
 	resp, err := v.client.Put(ctx, url, reqBody)
+	if err != nil {
+		return false, err
+	}
+
+	defer resp.Body.Close()
+
+	return true, nil
+}
+
+func (v *GitHub) executePATCHRequest(
+	ctx context.Context,
+	url string,
+	reqBody httpclient.Func,
+) (bool, error) {
+	resp, err := v.client.Patch(ctx, url, reqBody)
 	if err != nil {
 		return false, err
 	}

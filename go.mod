@@ -19,7 +19,7 @@ require (
 	github.com/thalesfsp/concurrentloop v1.2.4
 	github.com/thalesfsp/customerror v1.2.1
 	github.com/thalesfsp/godotenv v1.4.2
-	github.com/thalesfsp/httpclient v1.0.18
+	github.com/thalesfsp/httpclient v1.0.19
 	github.com/thalesfsp/validation v0.0.3
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1

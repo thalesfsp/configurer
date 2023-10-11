@@ -10,6 +10,9 @@ type Write struct {
 	// Environment is the environment to be used.
 	Environment string
 
+	// HTTPVerb is the HTTP verb to be used.
+	HTTPVerb string
+
 	// Target to write configuration. Default is "action".
 	Target string
 
@@ -19,6 +22,19 @@ type Write struct {
 
 // WriteFunc allows to specify loading options.
 type WriteFunc func(o *Write) error
+
+// WithHTTPVerb specifies the HTTP verb to be used.
+func WithHTTPVerb(httpVerb string) WriteFunc {
+	return func(o *Write) error {
+		if httpVerb == "" {
+			return customerror.NewInvalidError("httpVerb, can't be empty")
+		}
+
+		o.HTTPVerb = httpVerb
+
+		return nil
+	}
+}
 
 // WithEnvironment specifies the environment to be used.
 func WithEnvironment(environment string) WriteFunc {

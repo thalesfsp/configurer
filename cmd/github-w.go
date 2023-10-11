@@ -13,8 +13,9 @@ import (
 
 var (
 	environment, owner, repo string
-	variable                 bool
+	httpVerb                 string
 	target                   string
+	variable                 bool
 )
 
 // githubWCmd represents the env command.
@@ -67,6 +68,10 @@ to read your public key.
 			opts = append(opts, option.WithTarget(target))
 		}
 
+		if httpVerb != "" {
+			opts = append(opts, option.WithHTTPVerb(httpVerb))
+		}
+
 		if err := p.Write(ctx, parsedFile, opts...); err != nil {
 			log.Fatalln(err)
 		}
@@ -83,6 +88,7 @@ func init() {
 	githubWCmd.Flags().StringVar(&environment, "environment", "", "environment to write secrets")
 	githubWCmd.Flags().BoolVar(&variable, "variable", false, "variable to write secrets")
 	githubWCmd.Flags().StringVar(&target, "target", github.Actions.String(), "target to write secrets, e.g.: codespaces, actions")
+	githubWCmd.Flags().StringVar(&httpVerb, "httpVerb", "", "HTTP verb to be used")
 
 	githubWCmd.MarkFlagRequired("owner")
 	githubWCmd.MarkFlagRequired("repo")
