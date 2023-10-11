@@ -38,8 +38,6 @@ error_exit() {
   exit 1
 }
 
-trap 'error_exit "An error occurred. Exiting..."' ERR
-
 check_dependency() {
   command -v "$1" >/dev/null 2>&1 || error_exit "Command not found: $1"
 }
@@ -48,7 +46,6 @@ clean_up() {
   info "Cleaning up temporary directory: $tmp_dir"
   rm -rf "$tmp_dir"
 }
-trap clean_up EXIT
 
 has() {
   command -v "$1" 1>/dev/null 2>&1
