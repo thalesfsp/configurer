@@ -94,6 +94,8 @@ more secure.
 		// Should be able to override current environment variables.
 		shouldOverride := cmd.Flag("override").Value.String() == "true"
 
+		rawValue := cmd.Flag("rawValue").Value.String() == "true"
+
 		auth := &vault.Auth{
 			Address:   cmd.Flag("address").Value.String(),
 			AppRole:   cmd.Flag("app-role").Value.String(),
@@ -108,7 +110,7 @@ more secure.
 			SecretPath: cmd.Flag("secret-path").Value.String(),
 		}
 
-		vaultProvider, err := vault.New(shouldOverride, auth, sI)
+		vaultProvider, err := vault.New(shouldOverride, rawValue, auth, sI)
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -141,7 +143,7 @@ more secure.
 
 			defer file.Close()
 
-			if err := DumpToFile(file, finalValues); err != nil {
+			if err := DumpToFile(file, finalValues, rawValue); err != nil {
 				log.Fatalln(err)
 			}
 		}

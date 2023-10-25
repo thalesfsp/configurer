@@ -49,7 +49,7 @@ to read your public key.
 			log.Fatalln(err)
 		}
 
-		p, err := github.New(false, owner, repo)
+		p, err := github.New(false, false, owner, repo)
 		if err != nil {
 			log.Fatalln(err)
 		}

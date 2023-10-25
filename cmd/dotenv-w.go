@@ -34,7 +34,7 @@ var dotEnvWCmd = &cobra.Command{
 			log.Fatalln(err)
 		}
 
-		dotEnvProvider, err := dotenv.New(false, dotEnvFiles...)
+		dotEnvProvider, err := dotenv.New(false, false, dotEnvFiles...)
 		if err != nil {
 			log.Fatalln(err)
 		}

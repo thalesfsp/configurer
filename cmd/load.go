@@ -41,6 +41,12 @@ func init() {
 		"Override the env var with loaded ones",
 	)
 
+	loadCmd.PersistentFlags().Bool(
+		"rawValue",
+		false,
+		"If set, will not parse (escaping sequecence, etc) values",
+	)
+
 	loadCmd.PersistentFlags().StringVarP(
 		&dumpFilename,
 		"dump",

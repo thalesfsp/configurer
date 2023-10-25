@@ -31,7 +31,7 @@ func TestDumpToEnv(t *testing.T) {
 	if err := DumpToFile(fileEnv, map[string]string{
 		"K1": "V1",
 		"K2": "V2",
-	}); err != nil {
+	}, false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -60,7 +60,7 @@ func TestDumpToEnv(t *testing.T) {
 	if err := DumpToFile(fileJSON, map[string]string{
 		"K1": "V1",
 		"K2": "V2",
-	}); err != nil {
+	}, false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -87,7 +87,7 @@ func TestDumpToEnv(t *testing.T) {
 	if err := DumpToFile(fileYML, map[string]string{
 		"K1": "V1",
 		"K2": "V2",
-	}); err != nil {
+	}, false); err != nil {
 		t.Fatal(err)
 	}
 

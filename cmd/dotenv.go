@@ -49,7 +49,9 @@ NOTE: The "-c" flag have precedence over double dash (--)
 		// Should be able to override current environment variables.
 		shouldOverride := cmd.Flag("override").Value.String() == "true"
 
-		dotEnvProvider, err := dotenv.New(shouldOverride, dotEnvFiles...)
+		rawValue := cmd.Flag("rawValue").Value.String() == "true"
+
+		dotEnvProvider, err := dotenv.New(shouldOverride, rawValue, dotEnvFiles...)
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -82,7 +84,7 @@ NOTE: The "-c" flag have precedence over double dash (--)
 
 			defer file.Close()
 
-			if err := DumpToFile(file, finalValues); err != nil {
+			if err := DumpToFile(file, finalValues, rawValue); err != nil {
 				log.Fatalln(err)
 			}
 		}

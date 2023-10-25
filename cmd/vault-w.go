@@ -56,7 +56,7 @@ NOTE: If no app role is set, the provider will default to using token.`,
 			SecretPath: cmd.Flag("secret-path").Value.String(),
 		}
 
-		vaultProvider, err := vault.New(false, auth, sI)
+		vaultProvider, err := vault.New(false, false, auth, sI)
 		if err != nil {
 			log.Fatalln(err)
 		}
