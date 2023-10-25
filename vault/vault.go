@@ -136,12 +136,12 @@ func (v *Vault) Write(ctx context.Context, values map[string]interface{}, opts .
 // Vault will use configuration from `DefaultConfig()`, which is
 // the recommended starting configuration.
 func NewWithConfig(
-	override bool,
+	override, rawValue bool,
 	authInformation *Auth,
 	secretInformation *SecretInformation,
 	config Config,
 ) (provider.IProvider, error) {
-	provider, err := provider.New("vault", override)
+	provider, err := provider.New("vault", override, rawValue)
 	if err != nil {
 		return nil, err
 	}
@@ -229,9 +229,9 @@ func NewWithConfig(
 // NOTE: Already exported environment variables have precedence over
 // loaded ones. Set the overwrite flag to true to override them.
 func New(
-	override bool,
+	override, rawValue bool,
 	authInformation *Auth,
 	secretInformation *SecretInformation,
 ) (provider.IProvider, error) {
-	return NewWithConfig(override, authInformation, secretInformation, nil)
+	return NewWithConfig(override, rawValue, authInformation, secretInformation, nil)
 }

@@ -17,7 +17,7 @@ func ExampleNew() {
 	defer os.Unsetenv(key)
 
 	// Instantiate the provider of choice, in this case noop.
-	de, err := noop.New(false)
+	de, err := noop.New(false, false)
 	if err != nil {
 		panic(err)
 	}

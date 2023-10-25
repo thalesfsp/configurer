@@ -34,6 +34,9 @@ type IProvider interface {
 	// GetOverride returns the override flag.
 	GetOverride() bool
 
+	// GetRawValue returns the raw value flag.
+	GetRawValue() bool
+
 	// Load retrieves the configuration, and exports it to the environment.
 	//
 	// NOTE: Not all providers allow loading secrets, for example, GitHub. They
@@ -57,6 +60,10 @@ type Provider struct {
 	// Override is the flag that indicates if the provider should override
 	// existing environment variables. Default is `false`.
 	Override bool `json:"override"`
+
+	// RawValue is the flag that indicates if the provider should not parse
+	// (escaping sequence, etc) values. Default is `false`.
+	RawValue bool `json:"rawValue"`
 }
 
 //////
@@ -78,17 +85,23 @@ func (p *Provider) GetOverride() bool {
 	return p.Override
 }
 
+// GetRawValue returns the raw value flag.
+func (p *Provider) GetRawValue() bool {
+	return p.RawValue
+}
+
 // ExportToStruct exports the loaded configuration to the given struct.
 func (p *Provider) ExportToStruct(v any) error {
 	return util.Dump(v)
 }
 
 // New creates a new provider.
-func New(name string, override bool) (*Provider, error) {
+func New(name string, override bool, rawValue bool) (*Provider, error) {
 	provider := &Provider{
 		Logger:   logging.Get().Child(name),
 		Name:     name,
 		Override: override,
+		RawValue: rawValue,
 	}
 
 	if err := validation.Validate(provider); err != nil {

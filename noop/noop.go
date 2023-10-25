@@ -95,8 +95,8 @@ func (n *NoOp) Write(ctx context.Context, values map[string]interface{}, opts ..
 }
 
 // New sets up a new NoOp provider.
-func New(override bool) (provider.IProvider, error) {
-	provider, err := provider.New("noop", override)
+func New(override, rawValue bool) (provider.IProvider, error) {
+	provider, err := provider.New("noop", override, rawValue)
 	if err != nil {
 		return nil, err
 	}

@@ -62,7 +62,7 @@ func TestNoOp_Load(t *testing.T) {
 			t.Setenv("TEST_KEY", "TEST_VALUE")
 			defer os.Unsetenv(tt.wantKey)
 
-			d, err := New(tt.override)
+			d, err := New(tt.override, false)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("New() error = %v, wantErr %v", err, tt.wantErr)
 				return

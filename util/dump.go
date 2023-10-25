@@ -2,6 +2,7 @@ package util
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"reflect"
 
@@ -147,10 +148,16 @@ func Process(v any) error {
 }
 
 // DumpToEnv dumps `finalValue` to a `.env` file.
-func DumpToEnv(file *os.File, content map[string]string) error {
+func DumpToEnv(file *os.File, content map[string]string, rawValue bool) error {
 	for key, value := range content {
-		if _, err := file.WriteString(key + "=" + value + "\n"); err != nil {
-			return customerror.NewFailedToError("write to .env file", customerror.WithError(err))
+		if rawValue {
+			if _, err := fmt.Fprintf(file, "%s=%#v\n", key, value); err != nil {
+				return customerror.NewFailedToError("write to .env file", customerror.WithError(err))
+			}
+		} else {
+			if _, err := file.WriteString(key + "=" + value + "\n"); err != nil {
+				return customerror.NewFailedToError("write to .env file", customerror.WithError(err))
+			}
 		}
 	}
 
@@ -193,7 +200,6 @@ func DumpToYAML(file *os.File, content map[string]string) error {
 		return customerror.NewFailedToError("write to configurer.yaml file", customerror.WithError(err))
 	}
 
-	// Flush the file.
 	// Flush the file.
 	if err := file.Sync(); err != nil {
 		return customerror.NewFailedToError("flush "+file.Name()+" file", customerror.WithError(err))

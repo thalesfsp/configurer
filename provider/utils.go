@@ -16,6 +16,10 @@ func ExportToEnvVar(p IProvider, key string, value interface{}) (string, error) 
 	// Should export to the environment.
 	finalValue := fmt.Sprintf("%v", value)
 
+	if p.GetRawValue() {
+		finalValue = fmt.Sprintf("%#v", value)
+	}
+
 	// Should allow to don't overwrite existing environment variables.
 	if fromOsEnvValue != "" && !p.GetOverride() {
 		finalValue = fromOsEnvValue

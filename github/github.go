@@ -426,10 +426,10 @@ func (v *GitHub) executePATCHRequest(
 
 // New returns a new GitHub provider.
 func New(
-	override bool,
+	override, rawValue bool,
 	owner, repo string,
 ) (*GitHub, error) {
-	provider, err := provider.New(Name, override)
+	provider, err := provider.New(Name, override, rawValue)
 	if err != nil {
 		return nil, err
 	}

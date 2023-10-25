@@ -267,7 +267,7 @@ func TestNew(t *testing.T) {
 		//////
 
 		t.Run(tt.name, func(t *testing.T) {
-			got, err := New(tt.args.override, tt.args.authInformation, tt.args.secretInformation)
+			got, err := New(tt.args.override, false, tt.args.authInformation, tt.args.secretInformation)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("New() error = %v, wantErr %v", err, tt.wantErr)
 				return
