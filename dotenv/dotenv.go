@@ -89,8 +89,8 @@ func (d *DotEnv) Write(ctx context.Context, values map[string]interface{}, opts 
 }
 
 // New sets up a new DotEnv provider.
-func New(override bool, files ...string) (provider.IProvider, error) {
-	provider, err := provider.New("dotenv", override)
+func New(override, rawValuebool bool, files ...string) (provider.IProvider, error) {
+	provider, err := provider.New("dotenv", override, rawValuebool)
 	if err != nil {
 		return nil, err
 	}

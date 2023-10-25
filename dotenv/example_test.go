@@ -13,7 +13,7 @@ import (
 // ExampleNew creates a new dotenv instance and loads the .env file.
 func ExampleNew() {
 	// Instantiate the provider of choice, in this case dotenv.
-	de, err := dotenv.New(false, "testing.env")
+	de, err := dotenv.New(false, false, "testing.env")
 	if err != nil {
 		log.Fatalln(err)
 	}

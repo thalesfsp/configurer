@@ -6,6 +6,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/thalesfsp/configurer/option"
 	"github.com/thalesfsp/configurer/provider"
 )
@@ -92,7 +93,7 @@ func TestDotEnv_Load(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			defer os.Unsetenv(tt.wantKey)
 
-			d, err := New(tt.override, tt.fields.FilePaths...)
+			d, err := New(tt.override, false, tt.fields.FilePaths...)
 			if (err != nil) != tt.wantErr {
 				t.Errorf("New() error = %v, wantErr %v", err, tt.wantErr)
 				return
@@ -115,4 +116,14 @@ func TestDotEnv_Load(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestDotEnv_Parse(t *testing.T) {
+	d, err := New(false, true, "testing_parse.env")
+	assert.NoError(t, err)
+
+	m, err := d.Load(context.Background())
+	assert.NoError(t, err)
+
+	assert.Equal(t, "\"TEST_VALUE1\\nTEST_VALUE2\\nTEST_VALUE3\"", m["TEST"])
 }
