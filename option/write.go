@@ -13,7 +13,7 @@ type Write struct {
 	// HTTPVerb is the HTTP verb to be used.
 	HTTPVerb string
 
-	// Target to write configuration. Default is "action".
+	// Target to write configuration.
 	Target string
 
 	// Variable indicates it's a variable instead of secret.
