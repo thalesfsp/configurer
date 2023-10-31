@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/thalesfsp/customerror"
+	"github.com/thalesfsp/sypl/level"
 )
 
 // ExportToEnvVar exports the given key and value to the environment.
@@ -32,7 +33,11 @@ func ExportToEnvVar(p IProvider, key string, value interface{}) (string, error) 
 		)
 	}
 
-	p.GetLogger().Tracelnf("Exported key %s with value %s", key, finalValue)
+	if p.GetLogger().AnyMaxLevel(level.Debug) {
+		p.GetLogger().Debuglnf("Exported key %s", key)
+	} else if p.GetLogger().AnyMaxLevel(level.Trace) {
+		p.GetLogger().Tracelnf("Exported key %s with value %s", key, finalValue)
+	}
 
 	return finalValue, nil
 }
