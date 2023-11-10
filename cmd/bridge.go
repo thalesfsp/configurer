@@ -34,9 +34,9 @@ func init() {
 	// Required.
 	bridgeCmd.PersistentFlags().StringVar(&conf.Key, "key", "", "set server authentication key file path. Required if --key-value is not set")
 	bridgeCmd.PersistentFlags().StringVar(&conf.KeyValue, "key-value", os.Getenv("CONFIGURER_BRIDGE_KEY"), "set server authentication key. Required if --key is not set. Optionally reads from CONFIGURER_BRIDGE_KEY env var")
-	bridgeCmd.PersistentFlags().VarP(&conf.Destination, "destination", "", "set destination endpoint address. Multiple -destination conf can be provided")
-	bridgeCmd.PersistentFlags().VarP(&conf.Server, "server", "", "set server address: [<user>@]<host>[:<port>]")
-	bridgeCmd.PersistentFlags().VarP(&conf.Source, "source", "", "set source endpoint address. Multiple -source conf can be provided")
+	bridgeCmd.PersistentFlags().VarP(&conf.Destination, "destination", os.Getenv("CONFIGURER_BRIDGE_DESTINATION"), "set destination endpoint address. Multiple -destination conf can be provided")
+	bridgeCmd.PersistentFlags().VarP(&conf.Server, "server", os.Getenv("CONFIGURER_BRIDGE_SERVER"), "set server address: [<user>@]<host>[:<port>]")
+	bridgeCmd.PersistentFlags().VarP(&conf.Source, "source", os.Getenv("CONFIGURER_BRIDGE_SOURCE"), "set source endpoint address. Multiple -source conf can be provided")
 
 	// Operational.
 	bridgeCmd.PersistentFlags().BoolVar(&bridgeValidateConnection, "validate-connection", true, "validate connection to the server")
