@@ -273,6 +273,10 @@ func CreateBridge() {
 		sypl.WithField("destination", conf.Destination.String()),
 	)
 
+	if conf.Insecure {
+		bridgeLogger.Warnln("Ignoring machine's `known_hosts` file (set `insecure` to `false` to disable this")
+	}
+
 	client := core.New(conf)
 
 	if err := client.Start(); err != nil {
@@ -282,7 +286,6 @@ func CreateBridge() {
 
 // ValidateConnection validates the connection.
 func ValidateConnection() {
-	// validation is used to validate the connection.
 	bridgeLogger.Infolnf("Validating connection (set `validate-connection` to `false` to disable this)")
 
 	attempts := 0
