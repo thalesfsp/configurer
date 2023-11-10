@@ -92,7 +92,7 @@ require (
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
-	github.com/thalesfsp/mole v1.0.1
+	github.com/thalesfsp/mole v1.0.2
 	github.com/thalesfsp/sypl v1.9.18
 	golang.org/x/crypto v0.15.0
 	golang.org/x/net v0.18.0 // indirect
