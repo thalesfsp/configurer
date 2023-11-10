@@ -264,23 +264,30 @@ func ParseFile(ctx context.Context, file *os.File) (map[string]any, error) {
 	}
 }
 
-// RunnerBridge runs the bridge and command.
-func RunnerBridge(args []string) {
-	go func() {
-		client := core.New(conf)
+// CreateBridge creates a bridge.
+func CreateBridge() {
+	bridgeLogger.PrintlnWithOptions(
+		level.Info,
+		"Creating bridge",
+		sypl.WithField("source", conf.Source.String()),
+		sypl.WithField("destination", conf.Destination.String()),
+	)
 
-		if err := client.Start(); err != nil {
-			bridgeLogger.Fatalln("failed to start client", err)
-		}
-	}()
+	client := core.New(conf)
 
-	time.Sleep(3 * time.Second)
+	if err := client.Start(); err != nil {
+		bridgeLogger.Fatalln("failed to start client", err)
+	}
+}
 
-	bridgeLogger.Infoln("Validating TCP connection...")
+// ValidateConnection validates the connection.
+func ValidateConnection() {
+	// validation is used to validate the connection.
+	bridgeLogger.Infolnf("Validating connection (set `validate-connection` to `false` to disable this)")
 
 	attempts := 0
 
-	maxAttempts := 3
+	maxAttempts := bridgeRetryMaxAttempts
 
 	for {
 		conn, err := net.Dial("tcp", conf.Source.String())
@@ -300,12 +307,47 @@ func RunnerBridge(args []string) {
 			)
 		}
 
-		time.Sleep(1 * time.Second)
+		time.Sleep(bridgeRetryDelay)
 	}
 
 	bridgeLogger.Infoln("Connection validated!")
+}
+
+// RunnerBridge runs the bridge and command.
+func RunnerBridge(args []string) {
+	// If no args are provided, just create the bridge.
+	if len(args) == 0 {
+		go func() {
+			time.Sleep(bridgePostConnectionDelay)
+
+			if bridgeValidateConnection {
+				ValidateConnection()
+			}
+		}()
+
+		CreateBridge()
+
+		return
+	}
+
+	// Create the bridge in background.
+	go func() {
+		CreateBridge()
+	}()
+
+	time.Sleep(bridgePostConnectionDelay)
+
+	if bridgeValidateConnection {
+		ValidateConnection()
+	}
 
 	command, arguments := splitCmdFromArgs(args)
+
+	bridgeLogger.PrintlnWithOptions(
+		level.Info,
+		"Running command",
+		sypl.WithField("cmd", command),
+	)
 
 	os.Exit(runCommand(nil, command, arguments, false))
 }
