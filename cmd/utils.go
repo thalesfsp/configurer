@@ -3,6 +3,7 @@ package cmd
 import (
 	"context"
 	"log"
+	"net"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -18,6 +19,7 @@ import (
 	"github.com/thalesfsp/configurer/provider"
 	"github.com/thalesfsp/configurer/util"
 	"github.com/thalesfsp/customerror"
+	"github.com/thalesfsp/mole/core"
 	"github.com/thalesfsp/sypl"
 	"github.com/thalesfsp/sypl/level"
 )
@@ -92,10 +94,17 @@ func runCommand(
 
 		c.Process.Kill()
 
-		p.GetLogger().Infolnf(
-			"command killed after exceeding timeout of %s",
-			shutdownTimeout,
-		)
+		if p != nil {
+			p.GetLogger().Infolnf(
+				"command killed after exceeding timeout of %s",
+				shutdownTimeout,
+			)
+		} else {
+			log.Printf(
+				"command killed after exceeding timeout of %s",
+				shutdownTimeout,
+			)
+		}
 
 		os.Exit(1)
 	}()
@@ -108,14 +117,22 @@ func runCommand(
 	c.Wait()
 
 	if c.ProcessState.ExitCode() != 0 {
-		p.GetLogger().PrintWithOptions(
-			level.Error,
-			"command exited with non-zero exit code",
-			sypl.WithFields(map[string]interface{}{
-				"command":  cmdArgs,
-				"exitCode": c.ProcessState.ExitCode(),
-			}),
-		)
+		if p != nil {
+			p.GetLogger().PrintWithOptions(
+				level.Error,
+				"command exited with non-zero exit code",
+				sypl.WithFields(map[string]interface{}{
+					"command":  cmdArgs,
+					"exitCode": c.ProcessState.ExitCode(),
+				}),
+			)
+		} else {
+			log.Printf(
+				"command exited with non-zero exit code, command: %s, exitCode: %d",
+				cmdArgs,
+				c.ProcessState.ExitCode(),
+			)
+		}
 	}
 
 	// Should exit with the same exit code as the command.
@@ -245,4 +262,50 @@ func ParseFile(ctx context.Context, file *os.File) (map[string]any, error) {
 		return nil, customerror.
 			NewInvalidError("file extension, allowed: .env, .json, .yaml | .yml, .toml")
 	}
+}
+
+// RunnerBridge runs the bridge and command.
+func RunnerBridge(args []string) {
+	go func() {
+		client := core.New(conf)
+
+		if err := client.Start(); err != nil {
+			bridgeLogger.Fatalln("failed to start client", err)
+		}
+	}()
+
+	time.Sleep(3 * time.Second)
+
+	bridgeLogger.Infoln("Validating TCP connection...")
+
+	attempts := 0
+
+	maxAttempts := 3
+
+	for {
+		conn, err := net.Dial("tcp", conf.Source.String())
+		if err == nil {
+			conn.Close()
+
+			break
+		}
+
+		attempts++
+
+		if attempts >= maxAttempts {
+			bridgeLogger.Fatallnf(
+				"Failed to connect to %s, %d attempts",
+				conf.Source.String(),
+				maxAttempts,
+			)
+		}
+
+		time.Sleep(1 * time.Second)
+	}
+
+	bridgeLogger.Infoln("Connection validated!")
+
+	command, arguments := splitCmdFromArgs(args)
+
+	os.Exit(runCommand(nil, command, arguments, false))
 }

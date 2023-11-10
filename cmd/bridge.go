@@ -1,54 +1,26 @@
 package cmd
 
 import (
-	"log"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/thalesfsp/mole/core"
+	"github.com/thalesfsp/sypl"
+	"github.com/thalesfsp/sypl/level"
 )
 
-var conf = &core.Configuration{
-	ConnectionRetries: 3,
-	Detach:            false,
-	Insecure:          false,
-	KeepAliveInterval: 10 * time.Second,
-	Rpc:               false,
-	RpcAddress:        "127.0.0.1:0",
-	SshAgent:          "ssh-agent",
-	SshConfig:         "$HOME/.ssh/config",
-	Timeout:           3 * time.Second,
-	Verbose:           false,
-	WaitAndRetry:      3 * time.Second,
-}
+var (
+	bridgeLogger = sypl.NewDefault("bridge", level.Error)
+
+	conf = &core.Configuration{}
+)
 
 // bridgeCmd represents the run command.
 var bridgeCmd = &cobra.Command{
 	Aliases: []string{"b"},
 	Use:     "bridge",
-	Short:   "Creates a SSH-based bridge to the target",
-	Run: func(cmd *cobra.Command, args []string) {
-		// Check if key or key-value is set, they are mutually exclusive.
-		if conf.KeyValue == "" && conf.Key == "" {
-			log.Fatalln("error: missing required flag --key or --key-value")
-		}
-
-		// Parse key-value if it contains \n.
-		if conf.KeyValue != "" {
-			if strings.Contains(conf.KeyValue, "\\n") {
-				conf.KeyValue = strings.ReplaceAll(conf.KeyValue, "\\n", "\n")
-			}
-		}
-
-		client := core.New(conf)
-
-		err := client.Start()
-		if err != nil {
-			log.Fatalln("error starting bridge:", err)
-		}
-	},
+	Short:   "Manage SSH-based bridge(s) to target(s)",
 }
 
 func init() {
@@ -89,7 +61,20 @@ func init() {
 		"set server authentication key",
 	)
 
-	conf.TunnelType = "local"
+	bridgeCmd.PersistentFlags().BoolVarP(&conf.Verbose, "verbose", "v", false, "increase log verbosity")
+	bridgeCmd.PersistentFlags().BoolVarP(&conf.Insecure, "insecure", "i", false, "skip host key validation when connecting to ssh server")
+	bridgeCmd.PersistentFlags().BoolVarP(&conf.Detach, "detach", "x", false, "run process in background")
+	bridgeCmd.PersistentFlags().DurationVarP(&conf.KeepAliveInterval, "keep-alive-interval", "K", 10*time.Second, "time interval for keep alive packets to be sent")
+	bridgeCmd.PersistentFlags().IntVarP(&conf.ConnectionRetries, "connection-retries", "R", 3, `maximum number of connection retries to the ssh server
+	provide 0 to never give up or a negative number to disable`)
+	bridgeCmd.PersistentFlags().StringVarP(&conf.SshConfig, "config", "c", "$HOME/.ssh/config", "set config file path")
+	bridgeCmd.PersistentFlags().DurationVarP(&conf.WaitAndRetry, "retry-wait", "w", 3*time.Second, "time to wait before trying to reconnect to ssh server")
+	bridgeCmd.PersistentFlags().StringVarP(&conf.SshAgent, "ssh-agent", "A", "", "unix socket to communicate with a ssh agent")
+	bridgeCmd.PersistentFlags().DurationVarP(&conf.Timeout, "timeout", "t", 3*time.Second, "ssh server connection timeout")
+	bridgeCmd.PersistentFlags().BoolVarP(&conf.Rpc, "rpc", "", false, "enable the rpc server")
+	bridgeCmd.PersistentFlags().StringVarP(&conf.RpcAddress, "rpc-address", "", "127.0.0.1:0", `set the network address of the rpc server.
+	The default value uses a random free port to listen for requests.
+	The full address is kept on $HOME/.mole/<id>.`)
 
 	bridgeCmd.MarkPersistentFlagRequired("source")
 	bridgeCmd.MarkPersistentFlagRequired("destination")
