@@ -274,7 +274,7 @@ func CreateBridge() {
 	)
 
 	if conf.Insecure {
-		bridgeLogger.Warnln("Ignoring machine's `known_hosts` file (set `insecure` to `false` to disable this")
+		bridgeLogger.Infoln("Ignoring machine's `known_hosts` file (`insecure` is set to `true`)")
 	}
 
 	client := core.New(conf)

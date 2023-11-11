@@ -46,7 +46,7 @@ func init() {
 
 	// Fine-tuning.
 	bridgeCmd.PersistentFlags().BoolVarP(&conf.Detach, "detach", "x", false, "run process in background")
-	bridgeCmd.PersistentFlags().BoolVarP(&conf.Insecure, "insecure", "i", true, "skip host key validation when connecting to ssh server")
+	bridgeCmd.PersistentFlags().BoolVarP(&conf.Insecure, "insecure", "i", false, "skip host key validation when connecting to ssh server")
 	bridgeCmd.PersistentFlags().BoolVarP(&conf.Rpc, "rpc", "", false, "enable the rpc server")
 	bridgeCmd.PersistentFlags().BoolVarP(&conf.Verbose, "verbose", "v", false, "increase log verbosity")
 	bridgeCmd.PersistentFlags().DurationVarP(&conf.KeepAliveInterval, "keep-alive-interval", "K", 10*time.Second, "time interval for keep alive packets to be sent")
