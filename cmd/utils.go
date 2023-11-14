@@ -1,17 +1,20 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
 	"log"
 	"net"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
-	"github.com/kvz/logstreamer"
 	"github.com/thalesfsp/concurrentloop"
 	"github.com/thalesfsp/configurer/parsers/env"
 	"github.com/thalesfsp/configurer/parsers/jsonp"
@@ -21,7 +24,11 @@ import (
 	"github.com/thalesfsp/customerror"
 	"github.com/thalesfsp/mole/core"
 	"github.com/thalesfsp/sypl"
+	"github.com/thalesfsp/sypl/fields"
+	"github.com/thalesfsp/sypl/flag"
 	"github.com/thalesfsp/sypl/level"
+	"github.com/thalesfsp/sypl/output"
+	"github.com/thalesfsp/sypl/processor"
 )
 
 // CommandArgs represents the command and its arguments.
@@ -51,6 +58,16 @@ func splitCmdFromArgs(args []string) (string, []string) {
 	return command, arguments
 }
 
+// ElasticSearchConfig represents the ElasticSearch configuration.
+type ElasticSearchConfig struct {
+	Addresses []string `json:"addresses"`
+	APIKey    string   `json:"apiKey,omitempty"`
+	CloudID   string   `json:"cloudId,omitempty"`
+	Index     string   `json:"index"`
+	Password  string   `json:"password,omitempty"`
+	Username  string   `json:"username,omitempty"`
+}
+
 // Run the command and properly handle signals.
 func runCommand(
 	p provider.IProvider,
@@ -60,30 +77,80 @@ func runCommand(
 ) int {
 	c := exec.Command(command, arguments...)
 
-	c.Stderr = os.Stderr
+	// Creating a buffer to capture the output
+	var stdoutBuf bytes.Buffer
+	var stderrBuf bytes.Buffer
+
+	// Use the buffer for Stderr, Stdin, and Stdout
+	c.Stderr = &stderrBuf
 	c.Stdin = os.Stdin
-	c.Stdout = os.Stdout
+	c.Stdout = &stdoutBuf
 
-	// Builds the prefix.
-	cmdArgs := strings.TrimSuffix(command+" "+strings.Join(arguments, " "), " ") + " -> "
+	l := sypl.New("configurer", []output.IOutput{
+		output.New("stdout", level.Trace, os.Stdout, processor.MuteBasedOnLevel(level.Fatal, level.Error)),
+		output.New("stderr", level.Error, os.Stderr),
+	}...).SetFields(fields.Fields{
+		"command": command,
+		"args":    arguments,
+	})
 
-	if combinedOutput {
-		logger := log.New(os.Stdout, cmdArgs, log.LstdFlags)
+	//////
+	// Default outputs' processors.
+	//////
 
-		// Setup a streamer that will pipe `stderr`.
-		logStreamerErr := logstreamer.NewLogstreamer(logger, "stderr", true)
-		defer logStreamerErr.Close()
-
-		// Setup a streamer that will pipe to `stdout`.
-		logStreamerOut := logstreamer.NewLogstreamer(logger, "stdout", false)
-		defer logStreamerOut.Close()
-
-		c.Stderr = logStreamerErr
-		c.Stdout = logStreamerOut
+	// Add the lower case processor to all outputs.
+	for _, o := range l.GetOutputs() {
+		o.AddProcessors(processor.ChangeFirstCharCase(processor.Lowercase))
 	}
 
-	// Should kill the command after the specified timeout, and if received
-	// a SIGINT.
+	//////
+	// # ElasticSearch
+	//////
+
+	// if LogOutput contains "default"
+	if slices.Contains(logOutputs, "elasticsearch") {
+		var esConfig ElasticSearchConfig
+
+		if logSettings == "" {
+			// `Fatal` instead of `1` because it's a configuration error, no the
+			// command's error.
+			log.Fatalln("Missing log settings")
+		}
+
+		if err := json.Unmarshal([]byte(logSettings), &esConfig); err != nil {
+			// `Fatal` instead of `1` because it's a configuration error, no the
+			// command's error.
+			log.Fatalln("Failed to parse log settings", err)
+		}
+
+		l.AddOutputs(output.ElasticSearchWithDynamicIndex(
+			func() string {
+				return fmt.Sprintf("%s-%s", esConfig.Index, time.Now().Format("2006-01"))
+			},
+			output.ElasticSearchConfig{
+				Addresses: esConfig.Addresses,
+				APIKey:    esConfig.APIKey,
+				CloudID:   esConfig.CloudID,
+				Password:  esConfig.Password,
+				Username:  esConfig.Username,
+			},
+			level.Trace,
+			// Force the output to be printed.
+			processor.Flagger(flag.Force),
+		))
+	}
+
+	cmdArgs := command + " " + strings.Join(arguments, " ")
+
+	// Builds the prefix.
+	if combinedOutput {
+		prefix := "Command: " + cmdArgs + "\nOutput: "
+
+		l.GetOutput("stdout").AddProcessors(processor.Prefixer(prefix), processor.Suffixer("\n"))
+		l.GetOutput("stderr").AddProcessors(processor.Prefixer(prefix), processor.Suffixer("\n"))
+	}
+
+	// Signal handling setup
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
 
@@ -94,19 +161,7 @@ func runCommand(
 
 		c.Process.Kill()
 
-		if p != nil {
-			p.GetLogger().Infolnf(
-				"command killed after exceeding timeout of %s",
-				shutdownTimeout,
-			)
-		} else {
-			log.Printf(
-				"command killed after exceeding timeout of %s",
-				shutdownTimeout,
-			)
-		}
-
-		os.Exit(1)
+		handleCommandKill(p)
 	}()
 
 	// Start command and wait it to finish.
@@ -116,6 +171,37 @@ func runCommand(
 
 	c.Wait()
 
+	// Handle non-zero exit codes
+	handleNonZeroExit(p, c, cmdArgs)
+
+	// Print buffer contents to respective outputs
+	l.PrintWithOptions(level.Info, stdoutBuf.String())
+
+	if stderrBuf.Len() > 0 {
+		l.PrintWithOptions(level.Error, stderrBuf.String())
+	}
+
+	// Exit with the same exit code as the command.
+	return c.ProcessState.ExitCode()
+}
+
+func handleCommandKill(p provider.IProvider) {
+	if p != nil {
+		p.GetLogger().Infolnf(
+			"command killed after exceeding timeout of %s",
+			shutdownTimeout,
+		)
+	} else {
+		log.Printf(
+			"command killed after exceeding timeout of %s",
+			shutdownTimeout,
+		)
+	}
+
+	os.Exit(1)
+}
+
+func handleNonZeroExit(p provider.IProvider, c *exec.Cmd, cmdArgs string) {
 	if c.ProcessState.ExitCode() != 0 {
 		if p != nil {
 			p.GetLogger().PrintWithOptions(
@@ -134,9 +220,6 @@ func runCommand(
 			)
 		}
 	}
-
-	// Should exit with the same exit code as the command.
-	return c.ProcessState.ExitCode()
 }
 
 // ConcurrentRunner runs the commands concurrently.

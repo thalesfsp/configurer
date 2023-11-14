@@ -13,6 +13,18 @@ var startCmd = &cobra.Command{
 	Use:     "start",
 	Short:   "Start a bridge",
 	Run: func(cmd *cobra.Command, args []string) {
+		if conf.Destination.String() == "" {
+			log.Fatalln("error: missing required flag --destination")
+		}
+
+		if conf.Server.String() == "" {
+			log.Fatalln("error: missing required flag --server")
+		}
+
+		if conf.Source.String() == "" {
+			log.Fatalln("error: missing required flag --source")
+		}
+
 		// Check if key or key-value is set, they are mutually exclusive.
 		if conf.KeyValue == "" && conf.Key == "" {
 			log.Fatalln("error: missing required flag --key or --key-value")
