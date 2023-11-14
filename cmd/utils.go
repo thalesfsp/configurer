@@ -1,9 +1,9 @@
 package cmd
 
 import (
-	"bufio"
 	"context"
-	"io"
+	"encoding/json"
+	"fmt"
 	"log"
 	"net"
 	"os"
@@ -23,6 +23,7 @@ import (
 	"github.com/thalesfsp/mole/core"
 	"github.com/thalesfsp/sypl"
 	"github.com/thalesfsp/sypl/fields"
+	"github.com/thalesfsp/sypl/flag"
 	"github.com/thalesfsp/sypl/level"
 	"github.com/thalesfsp/sypl/output"
 	"github.com/thalesfsp/sypl/processor"
@@ -65,43 +66,88 @@ type ElasticSearchConfig struct {
 	Username  string   `json:"username,omitempty"`
 }
 
-// runCommand executes a command with given arguments and streams the output.
-func runCommand(p provider.IProvider, command string, arguments []string, combinedOutput bool) int {
+// Run the command and properly handle signals.
+func runCommand(
+	p provider.IProvider,
+	command string,
+	arguments []string,
+	combinedOutput bool,
+) int {
 	c := exec.Command(command, arguments...)
 
-	// Setting up stdout and stderr pipe
-	stdoutPipe, err := c.StdoutPipe()
-	if err != nil {
-		log.Fatal("Failed to create stdout pipe", err)
-	}
-	stderrPipe, err := c.StderrPipe()
-	if err != nil {
-		log.Fatal("Failed to create stderr pipe", err)
-	}
-
-	// Logger setup
-	l := sypl.New("configurer", []output.IOutput{
-		output.New("stdout", level.Trace, os.Stdout, processor.MuteBasedOnLevel(level.Fatal, level.Error)),
+	lStderr := sypl.New("configurer", []output.IOutput{
 		output.New("stderr", level.Error, os.Stderr),
 	}...).SetFields(fields.Fields{
 		"command": command,
 		"args":    arguments,
 	})
 
-	// Logger processors setup
-	for _, o := range l.GetOutputs() {
-		o.AddProcessors(processor.ChangeFirstCharCase(processor.Lowercase))
+	lStdout := sypl.New("configurer", []output.IOutput{
+		output.New("stdout", level.Trace, os.Stdout, processor.MuteBasedOnLevel(level.Fatal, level.Error)),
+	}...).SetFields(fields.Fields{
+		"command": command,
+		"args":    arguments,
+	})
+
+	//////
+	// # ElasticSearch
+	//////
+
+	// if LogOutput contains "default"
+	for _, logOutput := range logOutputs {
+		if logOutput == "elasticsearch" {
+			var esConfig ElasticSearchConfig
+
+			if logSettings == "" {
+				// `Fatal` instead of `1` because it's a configuration error, no the
+				// command's error.
+				log.Fatalln("Missing log settings")
+			}
+
+			if err := json.Unmarshal([]byte(logSettings), &esConfig); err != nil {
+				// `Fatal` instead of `1` because it's a configuration error, no the
+				// command's error.
+				log.Fatalln("Failed to parse log settings", err)
+			}
+
+			esOutput := output.ElasticSearchWithDynamicIndex(
+				func() string {
+					return fmt.Sprintf("%s-%s", esConfig.Index, time.Now().Format("2006-01"))
+				},
+				output.ElasticSearchConfig{
+					Addresses: esConfig.Addresses,
+					APIKey:    esConfig.APIKey,
+					CloudID:   esConfig.CloudID,
+					Password:  esConfig.Password,
+					Username:  esConfig.Username,
+				},
+				level.Trace,
+				// Force the output to be printed.
+				processor.Flagger(flag.Force),
+			)
+
+			lStderr.AddOutputs(esOutput)
+			lStdout.AddOutputs(esOutput)
+		}
 	}
 
-	// Start command
-	if err := c.Start(); err != nil {
-		log.Fatal("Failed to start command", err)
-	}
+	lStderr.SetDefaultIoWriterLevel(level.Error)
+	lStdout.SetDefaultIoWriterLevel(level.Trace)
 
-	// Stream stdout
-	go streamOutput(p, stdoutPipe, "stdout")
-	// Stream stderr
-	go streamOutput(p, stderrPipe, "stderr")
+	// Use the buffer for Stderr, Stdin, and Stdout
+	c.Stdin = os.Stdin
+	c.Stderr = lStderr
+	c.Stdout = lStdout
+
+	cmdArgs := command + " " + strings.Join(arguments, " ")
+
+	// Builds the prefix.
+	if combinedOutput {
+		prefix := "Command: " + cmdArgs + "\nOutput: "
+
+		lStderr.GetOutput("stderr").AddProcessors(processor.Prefixer(prefix), processor.Suffixer("\n"))
+		lStdout.GetOutput("stdout").AddProcessors(processor.Prefixer(prefix), processor.Suffixer("\n"))
+	}
 
 	// Signal handling setup
 	stop := make(chan os.Signal, 1)
@@ -110,7 +156,6 @@ func runCommand(p provider.IProvider, command string, arguments []string, combin
 	go func() {
 		<-stop
 
-		// Assuming shutdownTimeout is a predefined duration
 		time.Sleep(shutdownTimeout)
 
 		c.Process.Kill()
@@ -118,40 +163,18 @@ func runCommand(p provider.IProvider, command string, arguments []string, combin
 		handleCommandKill(p)
 	}()
 
-	// Wait for command to finish
-	if err := c.Wait(); err != nil {
-		handleNonZeroExit(p, c, command+" "+strings.Join(arguments, " "))
+	// Start command and wait it to finish.
+	if err := c.Run(); err != nil {
 		return 1
 	}
 
+	c.Wait()
+
 	// Handle non-zero exit codes
-	handleNonZeroExit(p, c, command+" "+strings.Join(arguments, " "))
+	handleNonZeroExit(p, c, cmdArgs)
 
+	// Exit with the same exit code as the command.
 	return c.ProcessState.ExitCode()
-}
-
-// streamOutput reads from a pipe and logs each line.
-func streamOutput(p provider.IProvider, pipe io.ReadCloser, outputType string) {
-	scanner := bufio.NewScanner(pipe)
-	for scanner.Scan() {
-		line := scanner.Text()
-		// Log the output line
-		if p != nil {
-			p.GetLogger().PrintWithOptions(
-				level.Info,
-				line,
-				sypl.WithFields(map[string]interface{}{
-					"outputType": outputType,
-				}),
-			)
-		} else {
-			log.Printf("[%s] %s", outputType, line)
-		}
-	}
-
-	if err := scanner.Err(); err != nil {
-		log.Printf("Error reading %s: %s", outputType, err)
-	}
 }
 
 func handleCommandKill(p provider.IProvider) {
