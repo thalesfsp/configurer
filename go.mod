@@ -12,7 +12,6 @@ require (
 	github.com/google/uuid v1.4.0
 	github.com/hashicorp/vault/api v1.10.0
 	github.com/iancoleman/strcase v0.3.0
-	github.com/kvz/logstreamer v0.0.0-20221024075423-bf5cfbd32e39
 	github.com/pelletier/go-toml v1.9.5
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.8.4

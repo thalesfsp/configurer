@@ -78,6 +78,7 @@ func runCommand(
 
 	// Creating a buffer to capture the output
 	var stdoutBuf bytes.Buffer
+
 	var stderrBuf bytes.Buffer
 
 	// Use the buffer for Stderr, Stdin, and Stdout
@@ -109,7 +110,6 @@ func runCommand(
 	// if LogOutput contains "default"
 	for _, logOutput := range logOutputs {
 		if logOutput == "elasticsearch" {
-
 			var esConfig ElasticSearchConfig
 
 			if logSettings == "" {
