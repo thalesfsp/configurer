@@ -1,14 +1,5 @@
-project_name: example
+project_name: configurer
 builds:
-  - id: linux-arm7-rpi-3
-    goos:
-      - linux
-    goarch:
-      - arm
-    goarm:
-      - "6"
-      - "7"
-    no_unique_dist_dir: true
   - env: 
     - CGO_ENABLED=0
     goos:
@@ -19,6 +10,9 @@ builds:
       - amd64
       - arm64
       - arm
+    goarm:
+      - "6"
+      - "7"
 
 source:
   enabled: true
