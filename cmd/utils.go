@@ -11,7 +11,6 @@ import (
 	"os/exec"
 	"os/signal"
 	"path/filepath"
-	"slices"
 	"strings"
 	"time"
 
@@ -108,36 +107,39 @@ func runCommand(
 	//////
 
 	// if LogOutput contains "default"
-	if slices.Contains(logOutputs, "elasticsearch") {
-		var esConfig ElasticSearchConfig
+	for _, logOutput := range logOutputs {
+		if logOutput == "elasticsearch" {
 
-		if logSettings == "" {
-			// `Fatal` instead of `1` because it's a configuration error, no the
-			// command's error.
-			log.Fatalln("Missing log settings")
+			var esConfig ElasticSearchConfig
+
+			if logSettings == "" {
+				// `Fatal` instead of `1` because it's a configuration error, no the
+				// command's error.
+				log.Fatalln("Missing log settings")
+			}
+
+			if err := json.Unmarshal([]byte(logSettings), &esConfig); err != nil {
+				// `Fatal` instead of `1` because it's a configuration error, no the
+				// command's error.
+				log.Fatalln("Failed to parse log settings", err)
+			}
+
+			l.AddOutputs(output.ElasticSearchWithDynamicIndex(
+				func() string {
+					return fmt.Sprintf("%s-%s", esConfig.Index, time.Now().Format("2006-01"))
+				},
+				output.ElasticSearchConfig{
+					Addresses: esConfig.Addresses,
+					APIKey:    esConfig.APIKey,
+					CloudID:   esConfig.CloudID,
+					Password:  esConfig.Password,
+					Username:  esConfig.Username,
+				},
+				level.Trace,
+				// Force the output to be printed.
+				processor.Flagger(flag.Force),
+			))
 		}
-
-		if err := json.Unmarshal([]byte(logSettings), &esConfig); err != nil {
-			// `Fatal` instead of `1` because it's a configuration error, no the
-			// command's error.
-			log.Fatalln("Failed to parse log settings", err)
-		}
-
-		l.AddOutputs(output.ElasticSearchWithDynamicIndex(
-			func() string {
-				return fmt.Sprintf("%s-%s", esConfig.Index, time.Now().Format("2006-01"))
-			},
-			output.ElasticSearchConfig{
-				Addresses: esConfig.Addresses,
-				APIKey:    esConfig.APIKey,
-				CloudID:   esConfig.CloudID,
-				Password:  esConfig.Password,
-				Username:  esConfig.Username,
-			},
-			level.Trace,
-			// Force the output to be printed.
-			processor.Flagger(flag.Force),
-		))
 	}
 
 	cmdArgs := command + " " + strings.Join(arguments, " ")
