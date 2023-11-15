@@ -4,7 +4,6 @@
 # Improved script to download the latest release from GitHub and install it at /usr/local/bin.
 #
 # Author: Thales Pinheiro
-# Improved by: ChatGPT
 ######
 
 ######

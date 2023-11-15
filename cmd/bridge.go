@@ -31,9 +31,21 @@ var bridgeCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(bridgeCmd)
 
-	conf.Destination.Set(os.Getenv("CONFIGURER_BRIDGE_DESTINATION"))
-	conf.Server.Set(os.Getenv("CONFIGURER_BRIDGE_SERVER"))
-	conf.Source.Set(os.Getenv("CONFIGURER_BRIDGE_SOURCE"))
+	dest := os.Getenv("CONFIGURER_BRIDGE_DESTINATION")
+	srv := os.Getenv("CONFIGURER_BRIDGE_SERVER")
+	src := os.Getenv("CONFIGURER_BRIDGE_SOURCE")
+
+	if dest != "" {
+		conf.Destination.Set(dest)
+	}
+
+	if srv != "" {
+		conf.Server.Set(srv)
+	}
+
+	if src != "" {
+		conf.Source.Set(src)
+	}
 
 	// Required.
 	bridgeCmd.PersistentFlags().StringVar(&conf.Key, "key", "", "set server authentication key file path. Required if --key-value is not set")
