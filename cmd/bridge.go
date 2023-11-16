@@ -18,6 +18,10 @@ var (
 	bridgeRetryMaxAttempts    int
 	bridgeValidateConnection  bool
 
+	bridgeDestination string
+	bridgeServer      string
+	bridgeSource      string
+
 	conf = &core.Configuration{}
 )
 
@@ -31,28 +35,12 @@ var bridgeCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(bridgeCmd)
 
-	dest := os.Getenv("CONFIGURER_BRIDGE_DESTINATION")
-	srv := os.Getenv("CONFIGURER_BRIDGE_SERVER")
-	src := os.Getenv("CONFIGURER_BRIDGE_SOURCE")
-
-	if dest != "" {
-		conf.Destination.Set(dest)
-	}
-
-	if srv != "" {
-		conf.Server.Set(srv)
-	}
-
-	if src != "" {
-		conf.Source.Set(src)
-	}
-
 	// Required.
 	bridgeCmd.PersistentFlags().StringVar(&conf.Key, "key", "", "set server authentication key file path. Required if --key-value is not set")
-	bridgeCmd.PersistentFlags().StringVar(&conf.KeyValue, "key-value", os.Getenv("CONFIGURER_BRIDGE_KEY"), "set server authentication key. Required if --key is not set. Optionally reads from CONFIGURER_BRIDGE_KEY env var")
-	bridgeCmd.PersistentFlags().VarP(&conf.Destination, "destination", "d", "set destination endpoint address. Multiple -destination conf can be provided")
-	bridgeCmd.PersistentFlags().VarP(&conf.Server, "server", "s", "set server address: [<user>@]<host>[:<port>]")
-	bridgeCmd.PersistentFlags().VarP(&conf.Source, "source", "u", "set source endpoint address. Multiple -source conf can be provided")
+	bridgeCmd.PersistentFlags().StringVar(&conf.KeyValue, "key-value", os.Getenv("CONFIGURER_BRIDGE_KEY"), "set server authentication key. Required if --key is not set.")
+	bridgeCmd.PersistentFlags().StringVarP(&bridgeDestination, "destination", "d", os.Getenv("CONFIGURER_BRIDGE_DESTINATION"), "set destination endpoint address.")
+	bridgeCmd.PersistentFlags().StringVarP(&bridgeServer, "server", "s", os.Getenv("CONFIGURER_BRIDGE_SERVER"), "set server address: [<user>@]<host>[:<port>]")
+	bridgeCmd.PersistentFlags().StringVarP(&bridgeSource, "source", "u", os.Getenv("CONFIGURER_BRIDGE_SOURCE"), "set source endpoint address. Multiple -source conf can be provided")
 
 	// Operational.
 	bridgeCmd.PersistentFlags().BoolVar(&bridgeValidateConnection, "validate-connection", true, "validate connection to the server")

@@ -13,6 +13,18 @@ var startCmd = &cobra.Command{
 	Use:     "start",
 	Short:   "Start a bridge",
 	Run: func(cmd *cobra.Command, args []string) {
+		if bridgeDestination != "" {
+			conf.Destination.Set(bridgeDestination)
+		}
+
+		if bridgeServer != "" {
+			conf.Server.Set(bridgeServer)
+		}
+
+		if bridgeSource != "" {
+			conf.Source.Set(bridgeSource)
+		}
+
 		if conf.Destination.String() == "" {
 			log.Fatalln("error: missing required flag --destination")
 		}
@@ -28,6 +40,11 @@ var startCmd = &cobra.Command{
 		// Check if key or key-value is set, they are mutually exclusive.
 		if conf.KeyValue == "" && conf.Key == "" {
 			log.Fatalln("error: missing required flag --key or --key-value")
+		}
+
+		// Check if key and key-value are set, they are mutually exclusive.
+		if conf.KeyValue != "" && conf.Key != "" {
+			log.Fatalln("error: or --key or --key-value")
 		}
 
 		conf.TunnelType = "local"

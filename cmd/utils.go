@@ -344,8 +344,9 @@ func CreateBridge() {
 	bridgeLogger.PrintlnWithOptions(
 		level.Info,
 		"Creating bridge",
-		sypl.WithField("source", conf.Source.String()),
 		sypl.WithField("destination", conf.Destination.String()),
+		sypl.WithField("server", conf.Server.String()),
+		sypl.WithField("source", conf.Source.String()),
 	)
 
 	if conf.Insecure {
@@ -388,7 +389,7 @@ func ValidateConnection() {
 		time.Sleep(bridgeRetryDelay)
 	}
 
-	bridgeLogger.Infoln("Connection validated!")
+	bridgeLogger.Infoln("Connection validated, you're good to go!")
 }
 
 // RunnerBridge runs the bridge and command.
