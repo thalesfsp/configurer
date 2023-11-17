@@ -13,6 +13,7 @@ import (
 var (
 	bridgeLogger = sypl.NewDefault("bridge", level.Info)
 
+	bridgeDisableStdIn        bool
 	bridgePostConnectionDelay time.Duration
 	bridgeRetryDelay          time.Duration
 	bridgeRetryMaxAttempts    int
@@ -43,6 +44,7 @@ func init() {
 	bridgeCmd.PersistentFlags().StringVarP(&bridgeSource, "source", "u", os.Getenv("CONFIGURER_BRIDGE_SOURCE"), "set source endpoint address. Multiple -source conf can be provided")
 
 	// Operational.
+	bridgeCmd.PersistentFlags().BoolVar(&bridgeDisableStdIn, "disable-stdin", false, "disable stdin forwarding")
 	bridgeCmd.PersistentFlags().BoolVar(&bridgeValidateConnection, "validate-connection", true, "validate connection to the server")
 	bridgeCmd.PersistentFlags().DurationVar(&bridgePostConnectionDelay, "post-connection-delay", 3*time.Second, "delay after connection is established")
 	bridgeCmd.PersistentFlags().DurationVar(&bridgeRetryDelay, "retry-delay", 1*time.Second, "delay between connection retries")

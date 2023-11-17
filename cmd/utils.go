@@ -72,6 +72,7 @@ func runCommand(
 	command string,
 	arguments []string,
 	combinedOutput bool,
+	disableStdIn bool,
 ) int {
 	c := exec.Command(command, arguments...)
 
@@ -135,7 +136,10 @@ func runCommand(
 	lStdout.SetDefaultIoWriterLevel(level.Trace)
 
 	// Use the buffer for Stderr, Stdin, and Stdout
-	c.Stdin = os.Stdin
+	if !disableStdIn {
+		c.Stdin = os.Stdin
+	}
+
 	c.Stderr = lStderr
 	c.Stdout = lStdout
 
@@ -219,7 +223,7 @@ func ConcurrentRunner(p provider.IProvider, cmds []string, args []string) {
 	if len(cmds) == 0 {
 		command, arguments := splitCmdFromArgs(args)
 
-		os.Exit(runCommand(p, command, arguments, false))
+		os.Exit(runCommand(p, command, arguments, false, bridgeDisableStdIn))
 	}
 
 	ca := []CommandArgs{}
@@ -237,7 +241,7 @@ func ConcurrentRunner(p provider.IProvider, cmds []string, args []string) {
 	}
 
 	if _, errs := concurrentloop.Map(context.Background(), ca, func(ctx context.Context, ca CommandArgs) (bool, error) {
-		if exitCode := runCommand(p, ca.Command, ca.Args, true); exitCode != 0 {
+		if exitCode := runCommand(p, ca.Command, ca.Args, true, bridgeDisableStdIn); exitCode != 0 {
 			return false, customerror.NewFailedToError(
 				"run command",
 				customerror.WithField("command", ca.Command),
@@ -428,5 +432,5 @@ func RunnerBridge(args []string) {
 		sypl.WithField("cmd", command),
 	)
 
-	os.Exit(runCommand(nil, command, arguments, false))
+	os.Exit(runCommand(nil, command, arguments, false, bridgeDisableStdIn))
 }
