@@ -72,7 +72,6 @@ func runCommand(
 	command string,
 	arguments []string,
 	combinedOutput bool,
-	disableStdIn bool,
 ) int {
 	c := exec.Command(command, arguments...)
 
@@ -133,13 +132,9 @@ func runCommand(
 	}
 
 	lStderr.SetDefaultIoWriterLevel(level.Error)
-	lStdout.SetDefaultIoWriterLevel(level.Trace)
+	lStdout.SetDefaultIoWriterLevel(level.Info)
 
-	// Use the buffer for Stderr, Stdin, and Stdout
-	if !disableStdIn {
-		c.Stdin = os.Stdin
-	}
-
+	c.Stdin = os.Stdin
 	c.Stderr = lStderr
 	c.Stdout = lStdout
 
@@ -169,10 +164,11 @@ func runCommand(
 
 	// Start command and wait it to finish.
 	if err := c.Run(); err != nil {
+		// If an error occurs, handle it appropriately.
+		// For example, log the error and return a non-zero status.
+		log.Printf("Error running command: %s", err)
 		return 1
 	}
-
-	c.Wait()
 
 	// Handle non-zero exit codes
 	handleNonZeroExit(p, c, cmdArgs)
@@ -223,7 +219,7 @@ func ConcurrentRunner(p provider.IProvider, cmds []string, args []string) {
 	if len(cmds) == 0 {
 		command, arguments := splitCmdFromArgs(args)
 
-		os.Exit(runCommand(p, command, arguments, false, bridgeDisableStdIn))
+		os.Exit(runCommand(p, command, arguments, false))
 	}
 
 	ca := []CommandArgs{}
@@ -241,7 +237,7 @@ func ConcurrentRunner(p provider.IProvider, cmds []string, args []string) {
 	}
 
 	if _, errs := concurrentloop.Map(context.Background(), ca, func(ctx context.Context, ca CommandArgs) (bool, error) {
-		if exitCode := runCommand(p, ca.Command, ca.Args, true, bridgeDisableStdIn); exitCode != 0 {
+		if exitCode := runCommand(p, ca.Command, ca.Args, true); exitCode != 0 {
 			return false, customerror.NewFailedToError(
 				"run command",
 				customerror.WithField("command", ca.Command),
@@ -432,5 +428,5 @@ func RunnerBridge(args []string) {
 		sypl.WithField("cmd", command),
 	)
 
-	os.Exit(runCommand(nil, command, arguments, false, bridgeDisableStdIn))
+	os.Exit(runCommand(nil, command, arguments, false))
 }
