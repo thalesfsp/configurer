@@ -167,6 +167,7 @@ func runCommand(
 		// If an error occurs, handle it appropriately.
 		// For example, log the error and return a non-zero status.
 		log.Printf("Error running command: %s", err)
+
 		return 1
 	}
 
