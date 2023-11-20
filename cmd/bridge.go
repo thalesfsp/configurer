@@ -6,12 +6,10 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/thalesfsp/mole/core"
-	"github.com/thalesfsp/sypl"
-	"github.com/thalesfsp/sypl/level"
 )
 
 var (
-	bridgeLogger = sypl.NewDefault("bridge", level.Info)
+	bridgeLogger = cliLogger.New("bridge")
 
 	bridgePostConnectionDelay time.Duration
 	bridgeRetryDelay          time.Duration

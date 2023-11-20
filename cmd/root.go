@@ -4,6 +4,8 @@ import (
 	"os"
 
 	"github.com/spf13/cobra"
+	"github.com/thalesfsp/sypl"
+	"github.com/thalesfsp/sypl/level"
 )
 
 var (
@@ -12,6 +14,8 @@ var (
 
 	// logSettings is the output's settings.
 	logSettings string
+
+	cliLogger = sypl.NewDefault("cli", level.Info)
 )
 
 // rootCmd represents the base command when called without any subcommands.
@@ -25,7 +29,7 @@ documentation for more details.`,
 }
 
 func init() {
-	rootCmd.PersistentFlags().StringSliceVar(&logOutputs, "log-outputs", []string{"default"}, "Available: default, elasticsearch")
+	rootCmd.PersistentFlags().StringSliceVar(&logOutputs, "log-outputs", nil, "Available: default, elasticsearch")
 	rootCmd.PersistentFlags().StringVar(&logSettings, "log-settings", "", "Log output settings, example (ElasticSearch): `{\"index\": \"configurer\"}`")
 }
 
