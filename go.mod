@@ -12,6 +12,7 @@ require (
 	github.com/google/uuid v1.4.0
 	github.com/hashicorp/vault/api v1.10.0
 	github.com/iancoleman/strcase v0.3.0
+	github.com/kvz/logstreamer v0.0.0-20221024075423-bf5cfbd32e39
 	github.com/pelletier/go-toml v1.9.5
 	github.com/spf13/cobra v1.8.0
 	github.com/stretchr/testify v1.8.4
@@ -81,7 +82,7 @@ require (
 	github.com/hashicorp/go-rootcerts v1.0.2 // indirect
 	github.com/hashicorp/go-secure-stdlib/parseutil v0.1.8 // indirect
 	github.com/hashicorp/go-secure-stdlib/strutil v0.1.2 // indirect
-	github.com/hashicorp/go-sockaddr v1.0.5 // indirect
+	github.com/hashicorp/go-sockaddr v1.0.6 // indirect
 	github.com/hashicorp/hcl v1.0.1-vault-5 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/leodido/go-urn v1.2.4 // indirect
