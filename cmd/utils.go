@@ -115,7 +115,13 @@ func runCommand(
 
 	// Default combined settings.
 	if combinedOutput {
-		logger := log.New(os.Stdout, cmdAndArgs, log.LstdFlags)
+		finalCmdAndArgs := cmdAndArgs
+
+		if len(arguments) > 0 {
+			finalCmdAndArgs += " "
+		}
+
+		logger := log.New(os.Stdout, finalCmdAndArgs, log.LstdFlags)
 
 		// Setup a streamer that will pipe `stderr`.
 		logStreamerErr := logstreamer.NewLogstreamer(logger, "stderr", true)
@@ -206,7 +212,7 @@ func runCommand(
 			processor.Flagger(flag.Force),
 		)
 
-		l := sypl.New("configurer", esOutput).SetFields(fields.Fields{
+		l := sypl.New(cmdAndArgs, esOutput).SetFields(fields.Fields{
 			"command": command,
 			"args":    arguments,
 		})
@@ -215,10 +221,8 @@ func runCommand(
 
 		// Builds the prefix.
 		if combinedOutput {
-			prefix := "Command: " + cmdAndArgs + "\nOutput: "
-
 			for _, o := range l.GetOutputs() {
-				o.AddProcessors(processor.Prefixer(prefix), processor.Suffixer("\n"))
+				o.AddProcessors(processor.Tagger("combined"))
 			}
 		}
 
@@ -371,6 +375,23 @@ func ConcurrentRunner(p provider.IProvider, cmds []string, args []string) {
 			Command: c,
 			Args:    a,
 		})
+	}
+
+	// Run sequentially.
+	if execMode == "sequential" {
+		for _, c := range ca {
+			if exitCode := runCommand(p, c.Command, c.Args, true); exitCode != 0 {
+				os.Exit(exitCode)
+			}
+
+			cliLogger.Debuglnf("Command run successfully, waiting %s for the next command to run", sequentialDelay)
+
+			time.Sleep(sequentialDelay)
+
+			cliLogger.Debuglnf("Waited successfully, running the next command")
+		}
+
+		os.Exit(0)
 	}
 
 	if _, errs := concurrentloop.Map(context.Background(), ca, func(ctx context.Context, ca CommandArgs) (bool, error) {

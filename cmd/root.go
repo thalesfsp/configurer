@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/thalesfsp/sypl"
@@ -14,6 +15,12 @@ var (
 
 	// logSettings is the output's settings.
 	logSettings string
+
+	// execMode is the execution mode.
+	execMode string
+
+	// sequentialDelay is the delay between one command and another.
+	sequentialDelay time.Duration
 
 	cliLogger = sypl.NewDefault("cli", level.Info)
 )
@@ -31,6 +38,9 @@ documentation for more details.`,
 func init() {
 	rootCmd.PersistentFlags().StringSliceVar(&logOutputs, "log-outputs", nil, "Available: default, elasticsearch")
 	rootCmd.PersistentFlags().StringVar(&logSettings, "log-settings", "", "Log output settings, example (ElasticSearch): `{\"index\": \"configurer\"}`")
+
+	rootCmd.PersistentFlags().StringVar(&execMode, "exec-mode", "concurrent", "Available: sequential, concurrent")
+	rootCmd.PersistentFlags().DurationVar(&sequentialDelay, "sequential-delay", 1*time.Second, "Time between one command and another")
 }
 
 // Execute adds all child commands to the root command and sets flags
