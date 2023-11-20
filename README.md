@@ -42,7 +42,7 @@ Check out [CONTRIBUTION](CONTRIBUTION.md).
 
 1. Update [CHANGELOG](CHANGELOG.md) accordingly.
 2. Once changes from MR are merged.
-3. Tag. Don't need to create release, it's automatically created by CI.
+3. Tag. Don't need to create a release, it's automatically created by CI.
 
 ## Roadmap
 
