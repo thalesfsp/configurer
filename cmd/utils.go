@@ -1,18 +1,22 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"os"
 	"os/exec"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
+	"github.com/kvz/logstreamer"
 	"github.com/thalesfsp/concurrentloop"
 	"github.com/thalesfsp/configurer/parsers/env"
 	"github.com/thalesfsp/configurer/parsers/jsonp"
@@ -28,6 +32,9 @@ import (
 	"github.com/thalesfsp/sypl/output"
 	"github.com/thalesfsp/sypl/processor"
 )
+
+// Regex pattern for .env extensions (.env, .env.local, .env.prod, etc.)
+var envRegex = regexp.MustCompile(`^\.env(\..+)?$`)
 
 // CommandArgs represents the command and its arguments.
 type CommandArgs struct {
@@ -58,94 +65,68 @@ func splitCmdFromArgs(args []string) (string, []string) {
 
 // ElasticSearchConfig represents the ElasticSearch configuration.
 type ElasticSearchConfig struct {
+	// Addresses is the list of addresses to connect to. Defaults to
+	// "http://localhost:9200".
 	Addresses []string `json:"addresses"`
-	APIKey    string   `json:"apiKey,omitempty"`
-	CloudID   string   `json:"cloudId,omitempty"`
-	Index     string   `json:"index"`
-	Password  string   `json:"password,omitempty"`
-	Username  string   `json:"username,omitempty"`
+
+	// APIKey is one way of authenticating to the ElasticSearch cluster using
+	// ElasticSearch API Key.
+	APIKey string `json:"apiKey,omitempty"`
+
+	// CloudID is one way of authenticating to the ElasticSearch cluster using
+	// Elastic Cloud.
+	CloudID string `json:"cloudId,omitempty"`
+
+	// FlushInterval is the interval at which the buffer is flushed. Defaults to
+	// 1 second.
+	FlushInterval time.Duration `json:"flushInterval,omitempty"`
+
+	// Index to write events to. Defaults to "configurer".
+	Index string `json:"index"`
+
+	// Password and Username are one way of authenticating to the ElasticSearch
+	// cluster.
+	Password string `json:"password,omitempty"`
+	Username string `json:"username,omitempty"`
+
+	// ServiceToken is one way of authenticating to the ElasticSearch cluster.
+	ServiceToken string `json:"serviceToken,omitempty"`
 }
 
 // Run the command and properly handle signals.
+//
+//nolint:funlen,nestif,gocognit
 func runCommand(
 	p provider.IProvider,
 	command string,
 	arguments []string,
 	combinedOutput bool,
 ) int {
+	// The structured command to run.
 	c := exec.Command(command, arguments...)
 
-	lStderr := sypl.New("configurer", []output.IOutput{
-		output.New("stderr", level.Error, os.Stderr),
-	}...).SetFields(fields.Fields{
-		"command": command,
-		"args":    arguments,
-	})
+	// Builds the command and arguments string - for logging purposes only.
+	cmdAndArgs := command + " " + strings.Join(arguments, " ")
 
-	lStdout := sypl.New("configurer", []output.IOutput{
-		output.New("stdout", level.Trace, os.Stdout, processor.MuteBasedOnLevel(level.Fatal, level.Error)),
-	}...).SetFields(fields.Fields{
-		"command": command,
-		"args":    arguments,
-	})
-
-	//////
-	// # ElasticSearch
-	//////
-
-	// if LogOutput contains "default"
-	for _, logOutput := range logOutputs {
-		if logOutput == "elasticsearch" {
-			var esConfig ElasticSearchConfig
-
-			if logSettings == "" {
-				// `Fatal` instead of `1` because it's a configuration error, no the
-				// command's error.
-				log.Fatalln("Missing log settings")
-			}
-
-			if err := json.Unmarshal([]byte(logSettings), &esConfig); err != nil {
-				// `Fatal` instead of `1` because it's a configuration error, no the
-				// command's error.
-				log.Fatalln("Failed to parse log settings", err)
-			}
-
-			esOutput := output.ElasticSearchWithDynamicIndex(
-				func() string {
-					return fmt.Sprintf("%s-%s", esConfig.Index, time.Now().Format("2006-01"))
-				},
-				output.ElasticSearchConfig{
-					Addresses: esConfig.Addresses,
-					APIKey:    esConfig.APIKey,
-					CloudID:   esConfig.CloudID,
-					Password:  esConfig.Password,
-					Username:  esConfig.Username,
-				},
-				level.Trace,
-				// Force the output to be printed.
-				processor.Flagger(flag.Force),
-			)
-
-			lStderr.AddOutputs(esOutput)
-			lStdout.AddOutputs(esOutput)
-		}
-	}
-
-	lStderr.SetDefaultIoWriterLevel(level.Error)
-	lStdout.SetDefaultIoWriterLevel(level.Info)
-
+	// Default log outputs.
 	c.Stdin = os.Stdin
-	c.Stderr = lStderr
-	c.Stdout = lStdout
+	c.Stdout = os.Stdout
+	c.Stderr = os.Stderr
 
-	cmdArgs := command + " " + strings.Join(arguments, " ")
-
-	// Builds the prefix.
+	// Default combined settings.
 	if combinedOutput {
-		prefix := "Command: " + cmdArgs + "\nOutput: "
+		logger := log.New(os.Stdout, cmdAndArgs, log.LstdFlags)
 
-		lStderr.GetOutput("stderr").AddProcessors(processor.Prefixer(prefix), processor.Suffixer("\n"))
-		lStdout.GetOutput("stdout").AddProcessors(processor.Prefixer(prefix), processor.Suffixer("\n"))
+		// Setup a streamer that will pipe `stderr`.
+		logStreamerErr := logstreamer.NewLogstreamer(logger, "stderr", true)
+		defer logStreamerErr.Close()
+
+		// Setup a streamer that will pipe to `stdout`.
+		logStreamerOut := logstreamer.NewLogstreamer(logger, "stdout", false)
+		defer logStreamerOut.Close()
+
+		c.Stderr = logStreamerErr
+		c.Stdout = logStreamerOut
 	}
 
 	// Signal handling setup
@@ -162,17 +143,172 @@ func runCommand(
 		handleCommandKill(p)
 	}()
 
+	//////
+	// Redirect output.
+	//////
+
+	logOutputsStr := strings.Join(logOutputs, ",")
+
+	if logOutputsStr != "" {
+		cliLogger.Debugln("directing output to", logOutputsStr)
+	}
+
+	if strings.ContainsAny(logOutputsStr, "elasticsearch") {
+		bufStdOut := new(bytes.Buffer)
+		bufStdErr := new(bytes.Buffer)
+
+		cliLogger.Debugln("setting up elasticsearch output")
+
+		var esConfig ElasticSearchConfig
+
+		if logSettings == "" {
+			// `Fatal` instead of `1` because it's a configuration error, no the
+			// command's error.
+			cliLogger.Fatalln("missing log settings")
+		}
+
+		if err := json.Unmarshal([]byte(logSettings), &esConfig); err != nil {
+			// `Fatal` instead of `1` because it's a configuration error, no the
+			// command's error.
+			cliLogger.Fatalln("failed to parse log settings", err)
+		}
+
+		// Validation.
+		if esConfig.Index == "" {
+			cliLogger.Fatalln("elasticsearch output is specified but index is missing")
+		}
+
+		if len(esConfig.Addresses) == 0 {
+			cliLogger.Warnln("elasticsearch output is specified but addresses are missing. Using default address: http://localhost:9200")
+
+			esConfig.Addresses = []string{"http://localhost:9200"}
+		}
+
+		// Set default flush interval.
+		if esConfig.FlushInterval == 0 {
+			esConfig.FlushInterval = 1 * time.Second
+		}
+
+		esOutput := output.ElasticSearchWithDynamicIndex(
+			func() string {
+				return fmt.Sprintf("%s-%s", esConfig.Index, time.Now().Format("2006-01"))
+			},
+			output.ElasticSearchConfig{
+				Addresses:    esConfig.Addresses,
+				APIKey:       esConfig.APIKey,
+				CloudID:      esConfig.CloudID,
+				Password:     esConfig.Password,
+				ServiceToken: esConfig.ServiceToken,
+				Username:     esConfig.Username,
+			},
+			level.Info,
+			// Force the output to be printed.
+			processor.Flagger(flag.Force),
+		)
+
+		l := sypl.New("configurer", esOutput).SetFields(fields.Fields{
+			"command": command,
+			"args":    arguments,
+		})
+
+		cliLogger.Debugln("elasticsearch output set up")
+
+		// Builds the prefix.
+		if combinedOutput {
+			prefix := "Command: " + cmdAndArgs + "\nOutput: "
+
+			for _, o := range l.GetOutputs() {
+				o.AddProcessors(processor.Prefixer(prefix), processor.Suffixer("\n"))
+			}
+		}
+
+		l.SetDefaultIoWriterLevel(level.Info)
+
+		// Create a multi-writer for Stdout
+		stdoutMultiWriter := io.MultiWriter(os.Stdout, bufStdOut)
+
+		// Create a multi-writer for Stderr
+		stderrMultiWriter := io.MultiWriter(os.Stderr, bufStdErr)
+
+		c.Stdin = os.Stdin
+		c.Stdout = stdoutMultiWriter
+		c.Stderr = stderrMultiWriter
+
+		// Start a goroutine for periodic flushing.
+		go func() {
+			// Flush every 1 second.
+			for {
+				select {
+				case <-stop:
+					return
+				default:
+					// Only if there is something to flush.
+					if bufStdOut.Len() > 0 {
+						// Read forever til end of line or error.
+						for {
+							line, err := bufStdOut.ReadString('\n')
+							if err != nil {
+								if err != io.EOF {
+									l.PrintWithOptions(
+										level.Error,
+										"failed to read stdout buffer",
+										sypl.WithField("error", err),
+										sypl.WithField("line", line),
+									)
+								}
+
+								// Break only in case of EOF, continue loop otherwise
+								break
+							}
+
+							l.Info(line)
+
+							cliLogger.Debugln("flushed stdout", len(line), "buffer")
+						}
+					}
+
+					// Only if there is something to flush.
+					if bufStdErr.Len() > 0 {
+						// Read forever til end of line or error.
+						for {
+							line, err := bufStdErr.ReadString('\n')
+							if err != nil {
+								if err != io.EOF {
+									l.PrintWithOptions(
+										level.Error,
+										"failed to read stderr buffer",
+										sypl.WithField("error", err),
+										sypl.WithField("line", line),
+									)
+								}
+
+								// Break only in case of EOF, continue loop otherwise
+								break
+							}
+
+							l.Error(line)
+
+							cliLogger.Debugln("flushed stderr", len(line), "buffer")
+						}
+					}
+
+					time.Sleep(esConfig.FlushInterval)
+				}
+			}
+		}()
+	}
+
 	// Start command and wait it to finish.
 	if err := c.Run(); err != nil {
 		// If an error occurs, handle it appropriately.
 		// For example, log the error and return a non-zero status.
-		log.Printf("Error running command: %s", err)
+		cliLogger.Errorlnf("error running command: %s", err)
 
 		return 1
 	}
 
 	// Handle non-zero exit codes
-	handleNonZeroExit(p, c, cmdArgs)
+	handleNonZeroExit(p, c, cmdAndArgs)
 
 	// Exit with the same exit code as the command.
 	return c.ProcessState.ExitCode()
@@ -185,7 +321,7 @@ func handleCommandKill(p provider.IProvider) {
 			shutdownTimeout,
 		)
 	} else {
-		log.Printf(
+		cliLogger.Errorlnf(
 			"command killed after exceeding timeout of %s",
 			shutdownTimeout,
 		)
@@ -206,7 +342,7 @@ func handleNonZeroExit(p provider.IProvider, c *exec.Cmd, cmdArgs string) {
 				}),
 			)
 		} else {
-			log.Printf(
+			cliLogger.Errorlnf(
 				"command exited with non-zero exit code, command: %s, exitCode: %d",
 				cmdArgs,
 				c.ProcessState.ExitCode(),
@@ -248,7 +384,11 @@ func ConcurrentRunner(p provider.IProvider, cmds []string, args []string) {
 
 		return true, nil
 	}); len(errs) > 0 {
-		p.GetLogger().PrintlnPretty(level.Error, errs)
+		if p != nil {
+			p.GetLogger().PrintlnPretty(level.Error, errs)
+		} else {
+			cliLogger.PrintlnPretty(level.Error, errs)
+		}
 
 		os.Exit(1)
 	}
@@ -261,21 +401,21 @@ func ConcurrentRunner(p provider.IProvider, cmds []string, args []string) {
 func DumpToFile(file *os.File, finalValues map[string]string, rawValue bool) error {
 	extension := filepath.Ext(file.Name())
 
-	switch extension {
-	case ".env":
+	switch {
+	case envRegex.MatchString(extension):
 		if err := util.DumpToEnv(file, finalValues, rawValue); err != nil {
 			return err
 		}
-	case ".json":
+	case extension == ".json":
 		if err := util.DumpToJSON(file, finalValues); err != nil {
 			return err
 		}
-	case ".yaml", ".yml":
+	case extension == ".yaml" || extension == ".yml":
 		if err := util.DumpToYAML(file, finalValues); err != nil {
 			return err
 		}
 	default:
-		log.Fatalln("invalid file extension, allowed: .env, .json, .yaml | .yml")
+		log.Fatalln("invalid file extension, allowed: .env.*, .json, .yaml | .yml")
 	}
 
 	return nil
@@ -285,8 +425,8 @@ func DumpToFile(file *os.File, finalValues map[string]string, rawValue bool) err
 func ParseFile(ctx context.Context, file *os.File) (map[string]any, error) {
 	extension := filepath.Ext(file.Name())
 
-	switch extension {
-	case ".env":
+	switch {
+	case envRegex.MatchString(extension):
 		p, err := env.New()
 		if err != nil {
 			return nil, err
@@ -298,7 +438,7 @@ func ParseFile(ctx context.Context, file *os.File) (map[string]any, error) {
 		}
 
 		return r, nil
-	case ".json":
+	case extension == ".json":
 		p, err := jsonp.New()
 		if err != nil {
 			return nil, err
@@ -310,7 +450,7 @@ func ParseFile(ctx context.Context, file *os.File) (map[string]any, error) {
 		}
 
 		return r, nil
-	case ".yaml", ".yml":
+	case extension == ".yaml" || extension == ".yml":
 		p, err := env.New()
 		if err != nil {
 			return nil, err
@@ -322,7 +462,7 @@ func ParseFile(ctx context.Context, file *os.File) (map[string]any, error) {
 		}
 
 		return r, nil
-	case ".toml":
+	case extension == ".toml":
 		t, err := toml.New()
 		if err != nil {
 			return nil, err
@@ -336,7 +476,7 @@ func ParseFile(ctx context.Context, file *os.File) (map[string]any, error) {
 		return r, nil
 	default:
 		return nil, customerror.
-			NewInvalidError("file extension, allowed: .env, .json, .yaml | .yml, .toml")
+			NewInvalidError("file extension, allowed: .env.*, .json, .yaml | .yml, .toml")
 	}
 }
 
