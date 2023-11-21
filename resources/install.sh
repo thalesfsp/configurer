@@ -15,23 +15,6 @@ BIN_DIR="${BIN_DIR:-/usr/local/bin}"
 VERSION="${VERSION:-latest}"
 ORG_NAME="thalesfsp"
 
-# Iterate over arguments, each argument can be in any order. BIN_DIR and VERSION are the arguments.
-for arg in "$@"; do
-  case $arg in
-    --bin-dir=*)
-      BIN_DIR="${arg#*=}"
-      shift
-      ;;
-    --version=*)
-      VERSION="${arg#*=}"
-      shift
-      ;;
-    *)
-      error_exit "Unrecognized argument: $arg"
-      ;;
-  esac
-done
-
 ### Logging & Helper Functions ###
 
 log() {
@@ -149,6 +132,8 @@ fi
 
 # Remove "v" from the latest_version string.
 versionWithoutV=${final_version#v}
+
+echo "DEBUG: $VERSION $latest_version $final_version $versionWithoutV"
 
 # Parse URL.
 final_url=$(printf "https://github.com/%s/%s/releases/download/%s/%s_%s_%s_%s.tar.gz" "$ORG_NAME" "$APP_NAME" "$final_version" "$APP_NAME" "$versionWithoutV" "$os" "$arch")

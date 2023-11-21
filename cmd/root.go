@@ -10,6 +10,11 @@ import (
 )
 
 var (
+	cliLogger = sypl.NewDefault("cli", level.Info).Breakpoint("ahaha")
+
+	// flushInterval is the default flush interval.
+	flushInterval = 1 * time.Second
+
 	// logOutputs is output used by the SYPL.
 	logOutputs []string
 
@@ -21,8 +26,6 @@ var (
 
 	// sequentialDelay is the delay between one command and another.
 	sequentialDelay time.Duration
-
-	cliLogger = sypl.NewDefault("cli", level.Info)
 )
 
 // rootCmd represents the base command when called without any subcommands.
@@ -41,6 +44,9 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&execMode, "exec-mode", "concurrent", "Available: sequential, concurrent")
 	rootCmd.PersistentFlags().DurationVar(&sequentialDelay, "sequential-delay", 1*time.Second, "Time between one command and another")
+
+	// flushInterval
+	rootCmd.PersistentFlags().DurationVar(&flushInterval, "flush-interval", 1*time.Second, "Flush interval for outputs, if any specified")
 }
 
 // Execute adds all child commands to the root command and sets flags

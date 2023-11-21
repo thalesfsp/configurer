@@ -45,6 +45,38 @@ type CommandArgs struct {
 	Command string `json:"command"`
 }
 
+func parseMap(aMap map[string]interface{}) map[string]interface{} {
+	flattened := make(map[string]interface{})
+
+	for key, val := range aMap {
+		switch val.(type) {
+		case map[string]interface{}:
+			nested := parseMap(val.(map[string]interface{}))
+			for nestedKey, nestedVal := range nested {
+				flattened[key+"."+nestedKey] = nestedVal
+			}
+		case []interface{}:
+			flattened[key] = parseArray(val.([]interface{}))
+		default:
+			flattened[key] = val
+		}
+	}
+
+	return flattened
+}
+
+func parseArray(anArray []interface{}) []interface{} {
+	for i, val := range anArray {
+		switch val.(type) {
+		case map[string]interface{}:
+			anArray[i] = parseMap(val.(map[string]interface{}))
+		case []interface{}:
+			anArray[i] = parseArray(val.([]interface{}))
+		}
+	}
+	return anArray
+}
+
 // Splits the command from the arguments.
 func splitCmdFromArgs(args []string) (string, []string) {
 	var (
@@ -76,10 +108,6 @@ type ElasticSearchConfig struct {
 	// CloudID is one way of authenticating to the ElasticSearch cluster using
 	// Elastic Cloud.
 	CloudID string `json:"cloudId,omitempty"`
-
-	// FlushInterval is the interval at which the buffer is flushed. Defaults to
-	// 1 second.
-	FlushInterval time.Duration `json:"flushInterval,omitempty"`
 
 	// Index to write events to. Defaults to "configurer".
 	Index string `json:"index"`
@@ -190,11 +218,6 @@ func runCommand(
 			esConfig.Addresses = []string{"http://localhost:9200"}
 		}
 
-		// Set default flush interval.
-		if esConfig.FlushInterval == 0 {
-			esConfig.FlushInterval = 1 * time.Second
-		}
-
 		esOutput := output.ElasticSearchWithDynamicIndex(
 			func() string {
 				return fmt.Sprintf("%s-%s", esConfig.Index, time.Now().Format("2006-01"))
@@ -265,7 +288,18 @@ func runCommand(
 								break
 							}
 
-							l.Info(line)
+							// If line is JSON, try to parse it as unstructured and log that.
+							jsonMap := map[string]interface{}{}
+
+							if err := json.Unmarshal([]byte(line), &jsonMap); err == nil {
+								flattened := parseMap(jsonMap)
+
+								l.Infoln(flattened)
+
+								l.PrintWithOptions(level.Info, line, sypl.WithFields(flattened))
+							} else {
+								l.Info(line)
+							}
 
 							cliLogger.Debugln("flushed stdout", len(line), "buffer")
 						}
@@ -296,7 +330,7 @@ func runCommand(
 						}
 					}
 
-					time.Sleep(esConfig.FlushInterval)
+					time.Sleep(flushInterval)
 				}
 			}
 		}()
@@ -360,7 +394,12 @@ func ConcurrentRunner(p provider.IProvider, cmds []string, args []string) {
 	if len(cmds) == 0 {
 		command, arguments := splitCmdFromArgs(args)
 
-		os.Exit(runCommand(p, command, arguments, false))
+		exitCode := runCommand(p, command, arguments, false)
+
+		// Wait for any output to be flushed.
+		time.Sleep(flushInterval)
+
+		os.Exit(exitCode)
 	}
 
 	ca := []CommandArgs{}
@@ -391,6 +430,9 @@ func ConcurrentRunner(p provider.IProvider, cmds []string, args []string) {
 			cliLogger.Debuglnf("Waited successfully, running the next command")
 		}
 
+		// Wait for any output to be flushed.
+		time.Sleep(flushInterval)
+
 		os.Exit(0)
 	}
 
@@ -413,6 +455,9 @@ func ConcurrentRunner(p provider.IProvider, cmds []string, args []string) {
 
 		os.Exit(1)
 	}
+
+	// Wait for any output to be flushed.
+	time.Sleep(flushInterval)
 
 	os.Exit(0)
 }
