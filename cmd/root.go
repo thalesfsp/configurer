@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	cliLogger = sypl.NewDefault("cli", level.Info).Breakpoint("ahaha")
+	cliLogger = sypl.NewDefault("cli", level.Info)
 
 	// flushInterval is the default flush interval.
 	flushInterval = 1 * time.Second

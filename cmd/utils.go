@@ -45,18 +45,20 @@ type CommandArgs struct {
 	Command string `json:"command"`
 }
 
-func parseMap(aMap map[string]interface{}) map[string]interface{} {
+func flatMap(aMap map[string]interface{}) map[string]interface{} {
 	flattened := make(map[string]interface{})
 
 	for key, val := range aMap {
-		switch val.(type) {
+		switch concreteVal := val.(type) {
 		case map[string]interface{}:
-			nested := parseMap(val.(map[string]interface{}))
+			nested := flatMap(concreteVal)
 			for nestedKey, nestedVal := range nested {
 				flattened[key+"."+nestedKey] = nestedVal
 			}
 		case []interface{}:
-			flattened[key] = parseArray(val.([]interface{}))
+			if arrayVal, ok := parseArray(concreteVal); ok {
+				flattened[key] = arrayVal
+			}
 		default:
 			flattened[key] = val
 		}
@@ -65,16 +67,22 @@ func parseMap(aMap map[string]interface{}) map[string]interface{} {
 	return flattened
 }
 
-func parseArray(anArray []interface{}) []interface{} {
+func parseArray(anArray []interface{}) ([]interface{}, bool) {
 	for i, val := range anArray {
-		switch val.(type) {
+		switch concreteVal := val.(type) {
 		case map[string]interface{}:
-			anArray[i] = parseMap(val.(map[string]interface{}))
+			mappedVal := flatMap(concreteVal)
+			anArray[i] = mappedVal
 		case []interface{}:
-			anArray[i] = parseArray(val.([]interface{}))
+			if arrayVal, ok := parseArray(concreteVal); ok {
+				anArray[i] = arrayVal
+			} else {
+				return nil, false
+			}
 		}
 	}
-	return anArray
+
+	return anArray, true
 }
 
 // Splits the command from the arguments.
@@ -235,7 +243,7 @@ func runCommand(
 			processor.Flagger(flag.Force),
 		)
 
-		l := sypl.New(cmdAndArgs, esOutput).SetFields(fields.Fields{
+		l := sypl.New(fmt.Sprintf("configurer-%d", time.Now().Unix()), esOutput).SetFields(fields.Fields{
 			"command": command,
 			"args":    arguments,
 		})
@@ -292,9 +300,7 @@ func runCommand(
 							jsonMap := map[string]interface{}{}
 
 							if err := json.Unmarshal([]byte(line), &jsonMap); err == nil {
-								flattened := parseMap(jsonMap)
-
-								l.Infoln(flattened)
+								flattened := flatMap(jsonMap)
 
 								l.PrintWithOptions(level.Info, line, sypl.WithFields(flattened))
 							} else {
@@ -354,7 +360,7 @@ func runCommand(
 
 func handleCommandKill(p provider.IProvider) {
 	if p != nil {
-		p.GetLogger().Infolnf(
+		p.GetLogger().Errorlnf(
 			"command killed after exceeding timeout of %s",
 			shutdownTimeout,
 		)
