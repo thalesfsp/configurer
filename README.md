@@ -8,17 +8,17 @@
 
 Setting target destination:
 
-`curl -s https://raw.githubusercontent.com/thalesfsp/configurer/main/resources/install.sh BIN_DIR=ABSOLUTE_DIR_PATH | sh`
+`curl -s https://raw.githubusercontent.com/thalesfsp/configurer/main/resources/install.sh | BIN_DIR=ABSOLUTE_DIR_PATH sh`
 
 Setting version:
 
-`curl -s https://raw.githubusercontent.com/thalesfsp/configurer/main/resources/install.sh VERSION=v{M.M.P} | sh`
+`curl -s https://raw.githubusercontent.com/thalesfsp/configurer/main/resources/install.sh | VERSION=v{M.M.P} sh`
 
 Example:
 
-`curl -s https://raw.githubusercontent.com/thalesfsp/configurer/main/resources/install.sh BIN_DIR=/usr/local/bin VERSION=v1.3.17 | sh`
+`curl -s https://raw.githubusercontent.com/thalesfsp/configurer/main/resources/install.sh | BIN_DIR=/usr/local/bin VERSION=v1.3.17 sh`
 
-### Programatically
+### Programmatically
 
 Install dependency:
 
@@ -30,7 +30,7 @@ Install dependency:
 
 See the `example` section by running `configurer l v --help` 
 
-### Programatically
+### Programmatically
 
 See [`dotenv/example_test.go`](dotenv/example_test.go)
 

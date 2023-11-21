@@ -133,8 +133,6 @@ fi
 # Remove "v" from the latest_version string.
 versionWithoutV=${final_version#v}
 
-echo "DEBUG: $VERSION $latest_version $final_version $versionWithoutV"
-
 # Parse URL.
 final_url=$(printf "https://github.com/%s/%s/releases/download/%s/%s_%s_%s_%s.tar.gz" "$ORG_NAME" "$APP_NAME" "$final_version" "$APP_NAME" "$versionWithoutV" "$os" "$arch")
 
