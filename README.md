@@ -6,19 +6,23 @@
 
 ### CLI
 
-Install using go install:
-
-`curl -s https://raw.githubusercontent.com/thalesfsp/configurer/main/resources/install.sh | sh`
-
 Setting target destination:
 
 `curl -s https://raw.githubusercontent.com/thalesfsp/configurer/main/resources/install.sh BIN_DIR=ABSOLUTE_DIR_PATH | sh`
+
+Setting version:
+
+`curl -s https://raw.githubusercontent.com/thalesfsp/configurer/main/resources/install.sh VERSION=v{M.M.P} | sh`
+
+Example:
+
+`curl -s https://raw.githubusercontent.com/thalesfsp/configurer/main/resources/install.sh BIN_DIR=/usr/local/bin VERSION=v1.3.17 | sh`
 
 ### Programatically
 
 Install dependency:
 
-`go get github.com/thalesfsp/configurer`
+`go get -u github.com/thalesfsp/configurer`
 
 ## Usage
 

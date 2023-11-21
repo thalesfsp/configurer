@@ -10,13 +10,27 @@
 # Variables & Setup
 ######
 
-ORG_NAME="thalesfsp"
 APP_NAME="configurer"
 BIN_DIR="${BIN_DIR:-/usr/local/bin}"
+VERSION="${VERSION:-latest}"
+ORG_NAME="thalesfsp"
 
-if [ $# -gt 0 ]; then
-  BIN_DIR=$1
-fi
+# Iterate over arguments, each argument can be in any order. BIN_DIR and VERSION are the arguments.
+for arg in "$@"; do
+  case $arg in
+    --bin-dir=*)
+      BIN_DIR="${arg#*=}"
+      shift
+      ;;
+    --version=*)
+      VERSION="${arg#*=}"
+      shift
+      ;;
+    *)
+      error_exit "Unrecognized argument: $arg"
+      ;;
+  esac
+done
 
 ### Logging & Helper Functions ###
 
@@ -79,7 +93,7 @@ else
 fi
 
 # Get the latest release version from GitHub.
-version=$(curl -s https://api.github.com/repos/${ORG_NAME}/${APP_NAME}/releases/latest | grep tag_name | cut -d '"' -f 4)
+latest_version=$(curl -s https://api.github.com/repos/${ORG_NAME}/${APP_NAME}/releases/latest | grep tag_name | cut -d '"' -f 4)
 
 # Detect the architecture.
 arch=$(uname -m)
@@ -89,6 +103,12 @@ case $arch in
     ;;
   arm64)
     arch="arm64"
+    ;;
+  armv6l)
+    arch="armv6"
+    ;;
+  armv7l)
+    arch="armv7"
     ;;
   *)
     error_exit "Unsupported architecture: $arch"
@@ -120,11 +140,18 @@ fetcher() {
     fi
 }
 
-# Remove "v" from the version string.
-versionWithoutV=${version#v}
+final_version="$latest_version"
+
+# IF VERSION is set, final_version is set to VERSION.
+if [ "$VERSION" != "latest" ]; then
+  final_version="$VERSION"
+fi
+
+# Remove "v" from the latest_version string.
+versionWithoutV=${final_version#v}
 
 # Parse URL.
-final_url=$(printf "https://github.com/%s/%s/releases/download/%s/%s_%s_%s_%s.tar.gz" "$ORG_NAME" "$APP_NAME" "$version" "$APP_NAME" "$versionWithoutV" "$os" "$arch")
+final_url=$(printf "https://github.com/%s/%s/releases/download/%s/%s_%s_%s_%s.tar.gz" "$ORG_NAME" "$APP_NAME" "$final_version" "$APP_NAME" "$versionWithoutV" "$os" "$arch")
 
 # Create a temp directory.
 tmp_dir=$(mktemp -d)
@@ -142,7 +169,6 @@ eval "$(fetcher)" "$tmp_dir/$APP_NAME.tar.gz" "$final_url"
 info "Unpacking archive"
 tar -xzf "$tmp_dir/$APP_NAME.tar.gz" -C "$tmp_dir"
 
-# Move the binary to BIN_DIR, use sudo only if necessary.
 # Move the binary to BIN_DIR, use sudo only if necessary.
 if [ -w "$BIN_DIR" ]; then
   info "Moving binary to $BIN_DIR"
