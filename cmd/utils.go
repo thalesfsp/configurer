@@ -18,9 +18,7 @@ import (
 
 	"github.com/kvz/logstreamer"
 	"github.com/thalesfsp/concurrentloop"
-	"github.com/thalesfsp/configurer/parsers/env"
-	"github.com/thalesfsp/configurer/parsers/jsonp"
-	"github.com/thalesfsp/configurer/parsers/toml"
+	"github.com/thalesfsp/configurer/dotenv"
 	"github.com/thalesfsp/configurer/provider"
 	"github.com/thalesfsp/configurer/util"
 	"github.com/thalesfsp/customerror"
@@ -493,65 +491,6 @@ func DumpToFile(file *os.File, finalValues map[string]string, rawValue bool) err
 	return nil
 }
 
-// ParseFile parse file. Extension is used to determine the format.
-func ParseFile(ctx context.Context, file *os.File) (map[string]any, error) {
-	extension := filepath.Ext(file.Name())
-
-	switch {
-	case envRegex.MatchString(extension):
-		p, err := env.New()
-		if err != nil {
-			return nil, err
-		}
-
-		r, err := p.Read(ctx, file)
-		if err != nil {
-			return nil, err
-		}
-
-		return r, nil
-	case extension == ".json":
-		p, err := jsonp.New()
-		if err != nil {
-			return nil, err
-		}
-
-		r, err := p.Read(ctx, file)
-		if err != nil {
-			return nil, err
-		}
-
-		return r, nil
-	case extension == ".yaml" || extension == ".yml":
-		p, err := env.New()
-		if err != nil {
-			return nil, err
-		}
-
-		r, err := p.Read(ctx, file)
-		if err != nil {
-			return nil, err
-		}
-
-		return r, nil
-	case extension == ".toml":
-		t, err := toml.New()
-		if err != nil {
-			return nil, err
-		}
-
-		r, err := t.Read(ctx, file)
-		if err != nil {
-			return nil, err
-		}
-
-		return r, nil
-	default:
-		return nil, customerror.
-			NewInvalidError("file extension, allowed: .env.*, .json, .yaml | .yml, .toml")
-	}
-}
-
 // CreateBridge creates a bridge.
 func CreateBridge() {
 	bridgeLogger.PrintlnWithOptions(
@@ -642,4 +581,40 @@ func RunnerBridge(args []string) {
 	)
 
 	os.Exit(runCommand(nil, command, arguments, false))
+}
+
+// LoadFromText loads configuration data from a text source and returns an
+// instance of the provider and a map of the loaded data.
+//
+// The function takes the following parameters:
+// - shouldOverride: Override the current env var values with loaded ones. The
+// default behaviour is the current env var values take precedence.
+// - rawValue: If set, will not parse (escaping sequecence, etc) values.
+// - contentFormat: A string specifying the format of the content to be loaded
+// (e.g., "json", "yaml", "xml").
+// - data: A string containing the actual content to be loaded.
+//
+// The function returns an instance of the provider (implementing the IProvider
+// interface) and a map[string]interface{} containing the loaded data.
+// If an error occurs during the loading process, the function will log the
+// error and terminate the program.
+func LoadFromText(
+	shouldOverride, rawValue bool,
+	contentFormat, data string,
+) (provider.IProvider, error) {
+	dotEnvProvider, err := dotenv.New(shouldOverride, rawValue, "noop.env")
+	if err != nil {
+		return nil, err
+	}
+
+	m, err := util.ParseFromText(context.Background(), contentFormat, data)
+	if err != nil {
+		return nil, err
+	}
+
+	for k, v := range m {
+		os.Setenv(k, fmt.Sprintf("%v", v))
+	}
+
+	return dotEnvProvider, nil
 }

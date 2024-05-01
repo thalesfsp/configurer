@@ -15,27 +15,27 @@ func TestDump(t *testing.T) {
 	t.Setenv("TestDump_T4", "123")
 
 	type TestData4 struct {
-		T8 int `json:"T8" default:"1"`
+		T8 int `default:"1" json:"T8"`
 	}
 
 	type TestData3 struct {
-		T7 float64 `json:"T7" default:"0.64"`
+		T7 float64 `default:"0.64" json:"T7"`
 
 		TestData4 TestData4
 	}
 
 	type TestData2 struct {
-		T5 string `json:"T5" default:"text2"`
-		T6 bool   `json:"T6" default:"true"`
+		T5 string `default:"text2" json:"T5"`
+		T6 bool   `default:"true"  json:"T6"`
 
 		TestData3 *TestData3
 	}
 
 	type TestData1 struct {
-		T1 string  `json:"T1" default:"text1" env:"TestDump_T1"`
-		T2 bool    `json:"T2" default:"false" env:"TestDump_T2"`
-		T3 float64 `json:"T3" default:"0.64" env:"TestDump_T3"`
-		T4 int     `json:"T4" default:"1" env:"TestDump_T4"`
+		T1 string  `default:"text1" env:"TestDump_T1" json:"T1"`
+		T2 bool    `default:"false" env:"TestDump_T2" json:"T2"`
+		T3 float64 `default:"0.64"  env:"TestDump_T3" json:"T3"`
+		T4 int     `default:"1"     env:"TestDump_T4" json:"T4"`
 
 		*TestData2
 	}
@@ -91,15 +91,15 @@ func TestDump_validation(t *testing.T) {
 	t.Setenv("TestDump_validation_T4", "123")
 
 	type TestData2 struct {
-		T5 string `json:"T5" default:"text2" validate:"gte=10"`
-		T6 bool   `json:"T6" default:"true"`
+		T5 string `default:"text2" json:"T5" validate:"gte=10"`
+		T6 bool   `default:"true"  json:"T6"`
 	}
 
 	type TestData1 struct {
-		T1 string  `json:"T1" default:"text1" env:"TestDump_validation_T1"`
-		T2 bool    `json:"T2" default:"true" env:"TestDump_validation_T2"`
-		T3 float64 `json:"T3" default:"0.64" env:"TestDump_validation_T3" validate:"gte=2"`
-		T4 int     `json:"T4" default:"1" env:"TestDump_validation_T4"`
+		T1 string  `default:"text1" env:"TestDump_validation_T1" json:"T1"`
+		T2 bool    `default:"true"  env:"TestDump_validation_T2" json:"T2"`
+		T3 float64 `default:"0.64"  env:"TestDump_validation_T3" json:"T3" validate:"gte=2"`
+		T4 int     `default:"1"     env:"TestDump_validation_T4" json:"T4"`
 
 		*TestData2
 	}
@@ -123,25 +123,25 @@ func TestDump_validation(t *testing.T) {
 
 func TestSetDefaults_omitempty(t *testing.T) {
 	type TestData struct {
-		T1 string `json:"T1,omitempty" default:"text"`
-		T2 string `json:"T2,omitempty" default:""`
+		T1 string `default:"text"      json:"T1,omitempty"`
+		T2 string `default:""          json:"T2,omitempty"`
 		T3 string `json:"T3,omitempty"`
-		T4 string `json:"T4,omitempty" default:"text4"`
+		T4 string `default:"text4"     json:"T4,omitempty"`
 
-		T5 bool `json:"T5,omitempty" default:"true"`
-		T6 bool `json:"T6,omitempty" default:"false"`
-		T7 bool `json:"T7,omitempty" default:""`
+		T5 bool `default:"true"      json:"T5,omitempty"`
+		T6 bool `default:"false"     json:"T6,omitempty"`
+		T7 bool `default:""          json:"T7,omitempty"`
 		T8 bool `json:"T8,omitempty"`
 
-		T9  float64 `json:"T9,omitempty" default:"0.64"`
-		T10 float64 `json:"T10,omitempty" default:""`
+		T9  float64 `default:"0.64"       json:"T9,omitempty"`
+		T10 float64 `default:""           json:"T10,omitempty"`
 		T11 float64 `json:"T11,omitempty"`
-		T12 float64 `json:"T12,omitempty" default:"0.33"`
+		T12 float64 `default:"0.33"       json:"T12,omitempty"`
 
-		T13 int `json:"T13,omitempty" default:"12345"`
-		T14 int `json:"T14,omitempty" default:""`
+		T13 int `default:"12345"      json:"T13,omitempty"`
+		T14 int `default:""           json:"T14,omitempty"`
 		T15 int `json:"T15,omitempty"`
-		T16 int `json:"T16,omitempty" default:"99999"`
+		T16 int `default:"99999"      json:"T16,omitempty"`
 	}
 
 	r := TestData{
@@ -398,6 +398,8 @@ func TestSetID(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			tc := tc
+
 			err := SetID(&tc.input)
 			if err != nil {
 				if !tc.expectErrMsg {

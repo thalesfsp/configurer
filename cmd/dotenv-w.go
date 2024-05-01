@@ -8,6 +8,7 @@ import (
 
 	"github.com/spf13/cobra"
 	"github.com/thalesfsp/configurer/dotenv"
+	"github.com/thalesfsp/configurer/util"
 )
 
 var targetFilename string
@@ -29,7 +30,7 @@ var dotEnvWCmd = &cobra.Command{
 			log.Fatalln(err)
 		}
 
-		parsedFile, err := ParseFile(ctx, f)
+		parsedFile, err := util.ParseFile(ctx, f)
 		if err != nil {
 			log.Fatalln(err)
 		}

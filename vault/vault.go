@@ -52,12 +52,12 @@ type Config = *vault.Config
 
 // Auth is Vault authentication information.
 type Auth struct {
-	Address   string `json:"address" validate:"required"`
-	AppRole   string `json:"-" validate:"omitempty,gte=1"`
-	Namespace string `json:"-" validate:"omitempty,gte=1"`
-	RoleID    string `json:"role_id" validate:"omitempty,gte=1"`
+	Address   string `json:"address"   validate:"required"`
+	AppRole   string `json:"-"         validate:"omitempty,gte=1"`
+	Namespace string `json:"-"         validate:"omitempty,gte=1"`
+	RoleID    string `json:"role_id"   validate:"omitempty,gte=1"`
 	SecretID  string `json:"secret_id" validate:"omitempty,gte=1"`
-	Token     string `json:"-" validate:"omitempty,gte=1"`
+	Token     string `json:"-"         validate:"omitempty,gte=1"`
 }
 
 // SecretInformation is the information about a secret, where to retrieve it.

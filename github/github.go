@@ -82,8 +82,8 @@ type GitHub struct {
 	publicKeyResponseCodespace *PublicKeyResponse `json:"-" validate:"required"`
 
 	Owner string `json:"owner" validate:"required"`
-	Repo  string `json:"repo" validate:"required"`
-	Token string `json:"-" validate:"required"`
+	Repo  string `json:"repo"  validate:"required"`
+	Token string `json:"-"     validate:"required"`
 
 	client *httpclient.Client `json:"-" validate:"required"`
 }

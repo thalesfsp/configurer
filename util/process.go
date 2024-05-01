@@ -215,6 +215,7 @@ func parseMap(valueType reflect.Type, tag string) (interface{}, error) {
 			if err != nil {
 				return nil, fmt.Errorf("failed to parse value %s: %w", kv[1], err)
 			}
+
 			mapValue.SetMapIndex(reflect.ValueOf(key), reflect.ValueOf(value))
 		}
 	}

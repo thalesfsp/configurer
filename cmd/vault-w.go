@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/thalesfsp/configurer/util"
 	"github.com/thalesfsp/configurer/vault"
 )
 
@@ -39,7 +40,7 @@ NOTE: If no app role is set, the provider will default to using token.`,
 			log.Fatalln(err)
 		}
 
-		parsedFile, err := ParseFile(ctx, f)
+		parsedFile, err := util.ParseFile(ctx, f)
 		if err != nil {
 			log.Fatalln(err)
 		}

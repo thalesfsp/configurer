@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/thalesfsp/configurer/github"
 	"github.com/thalesfsp/configurer/option"
+	"github.com/thalesfsp/configurer/util"
 )
 
 var (
@@ -44,7 +45,7 @@ to read your public key.
 			log.Fatalln(err)
 		}
 
-		parsedFile, err := ParseFile(ctx, f)
+		parsedFile, err := util.ParseFile(ctx, f)
 		if err != nil {
 			log.Fatalln(err)
 		}

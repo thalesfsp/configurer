@@ -445,7 +445,7 @@ func TestProcess_notExported(t *testing.T) {
 	type TestStruct struct {
 		field1 string `customtag:"updatedA"`
 
-		field2 *TestStruct2 `json:"-" customtag:"updatedB" validate:"required,gte=0"`
+		field2 *TestStruct2 `customtag:"updatedB" json:"-" validate:"required,gte=0"`
 	}
 
 	ts := &TestStruct{
@@ -470,11 +470,11 @@ func TestProcess_notExported(t *testing.T) {
 
 func TestProcess_StructKeyPointer(t *testing.T) {
 	type TestStruct struct {
-		A *string  `json:"A" default:"42"`
-		B *float32 `json:"B" default:"42"`
-		C *float64 `json:"C" default:"42"`
-		D *bool    `json:"D" default:"true"`
-		E *int     `json:"E" default:"42"`
+		A *string  `default:"42"   json:"A"`
+		B *float32 `default:"42"   json:"B"`
+		C *float64 `default:"42"   json:"C"`
+		D *bool    `default:"true" json:"D"`
+		E *int     `default:"42"   json:"E"`
 		F *int     `json:"F"`
 	}
 
