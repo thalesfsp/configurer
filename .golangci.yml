@@ -26,6 +26,9 @@ linters:
     - ireturn
     - exhaustive
     - dupword
+    - depguard
+    - testifylint
+    - perfsprint
   fast: false
 
 # Settings for specific linters
@@ -36,6 +39,11 @@ linters-settings:
 
   nestif:
     min-complexity: 8
+
+  revive:
+    rules:
+      - name: unused-parameter
+        disabled: true
 
 issues:
   exclude-rules:
