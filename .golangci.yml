@@ -29,6 +29,7 @@ linters:
     - depguard
     - testifylint
     - perfsprint
+    - mnd
   fast: false
 
 # Settings for specific linters

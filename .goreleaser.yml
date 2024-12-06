@@ -9,7 +9,7 @@ changelog:
       - '^testing:'
 
 builds:
-  - env: 
+  - env:
       - CGO_ENABLED=0
     flags:
       # - `trimpath` removes absolute path in the trace.
@@ -31,15 +31,16 @@ builds:
       - -X github.com/thalesfsp/configurer/internal/version.buildTime={{.CommitDate}}
     goos:
       - linux
-      - windows
+      # - windows
       - darwin
     goarch:
       - amd64
       - arm64
-      - arm
     goarm:
       - "6"
       - "7"
+
+dist: bin
 
 source:
   enabled: true
