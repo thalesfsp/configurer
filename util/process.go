@@ -425,7 +425,7 @@ func setValueFromTag(v reflect.Value, field reflect.StructField, tag string, con
 
 // process a struct and its fields. Use it to build your own custom tag handler.
 //
-//nolint:errcheck
+//nolint:errcheck,intrange
 func process(tagName string, s any, cb Func) error {
 	v := reflect.ValueOf(s)
 

@@ -84,6 +84,8 @@ func parseArray(anArray []interface{}) ([]interface{}, bool) {
 }
 
 // Splits the command from the arguments.
+//
+//nolint:intrange
 func splitCmdFromArgs(args []string) (string, []string) {
 	var (
 		command   string
