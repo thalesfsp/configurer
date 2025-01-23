@@ -6,15 +6,17 @@
 # Params.
 ###
 
-APP_NAME := "configurer"
-BIN_NAME := $(APP_NAME)
+PROJECT_NAME := "configurer"
+BIN_NAME := $(PROJECT_NAME)
 BIN_DIR := bin
 BIN_PATH := $(BIN_DIR)/$(BIN_NAME)
 
-HAS_AIR := $(shell command -v air;)
 HAS_GODOC := $(shell command -v godoc;)
 HAS_GOLANGCI := $(shell command -v golangci-lint;)
 HAS_GORELEASER := $(shell command -v goreleaser;)
+
+GOLANGCI_VERSION := v1.61.0
+GORELEASER_VERSION := v2.4.8
 
 default: ci
 
@@ -34,13 +36,6 @@ ci-integration: lint test-integration coverage
 coverage:
 	@go tool cover -func=coverage.out && echo "Coverage OK"
 
-dev:
-ifndef HAS_AIR
-	@echo "Could not find air, installing it"
-	@go install github.com/cosmtrek/air@latest
-endif
-	@air -c .air.toml
-
 doc:
 ifndef HAS_GODOC
 	@echo "Could not find godoc, installing it"
@@ -52,14 +47,14 @@ endif
 lint:
 ifndef HAS_GOLANGCI
 	@echo "Could not find golangci-list, installing it"
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.57.1
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_VERSION)
 endif
 	@golangci-lint run -v -c .golangci.yml && echo "Lint OK"
 
 release-local:
 ifndef HAS_GORELEASER
 	@echo "Could not find goreleaser, installing it"
-	@go install github.com/goreleaser/goreleaser@v1.11.5
+	@go install github.com/goreleaser/goreleaser@$(GORELEASER_VERSION)
 endif
 	@goreleaser build --clean --snapshot && echo "Local release OK"
 
