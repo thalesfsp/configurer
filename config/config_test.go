@@ -14,20 +14,16 @@ type C struct {
 
 func TestReadConfigFile(t *testing.T) {
 	// Create a temporary file in the OS temp directory.
-	// tmpFile, err := os.CreateTemp("", "config-*.yaml")
-	// assert.NoError(t, err)
-
-	filePath := "/var/folders/3n/x9cr9_cd6yj7flykwvl452p40000gn/T/config-829069182.yaml"
-
-	t.Log("File path:", filePath)
+	tmpFile, err := os.CreateTemp("", "config-*.yaml")
+	assert.NoError(t, err)
 
 	// Load configuration, write default if needed.
-	got, err := LoadConfiguration(filePath, "configurer", &C{Model: "default"})
+	got, err := LoadConfiguration(tmpFile.Name(), "configurer", &C{Model: "default"})
 	assert.NoError(t, err)
 	assert.NotNil(t, got)
 
 	// Read the temp file to assert the content.
-	data, err := os.ReadFile(filePath)
+	data, err := os.ReadFile(tmpFile.Name())
 	assert.NoError(t, err)
 
 	// Assert the content of the file.
