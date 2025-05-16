@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"log"
+	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -13,12 +14,29 @@ var startCmd = &cobra.Command{
 	Use:     "start",
 	Short:   "Start a bridge",
 	Run: func(cmd *cobra.Command, args []string) {
+		cBK := os.Getenv("CONFIGURER_BRIDGE_KEY")
+		cBD := os.Getenv("CONFIGURER_BRIDGE_DESTINATION")
+		cBSe := os.Getenv("CONFIGURER_BRIDGE_SERVER")
+		cBSo := os.Getenv("CONFIGURER_BRIDGE_SOURCE")
+
+		if bridgeDestination != "" && cBD != "" {
+			bridgeDestination = cBD
+		}
+
 		if bridgeDestination != "" {
 			conf.Destination.Set(bridgeDestination)
 		}
 
+		if bridgeServer == "" && cBSe != "" {
+			bridgeServer = cBSe
+		}
+
 		if bridgeServer != "" {
 			conf.Server.Set(bridgeServer)
+		}
+
+		if bridgeSource == "" && cBSo != "" {
+			bridgeSource = cBSo
 		}
 
 		if bridgeSource != "" {
@@ -35,6 +53,10 @@ var startCmd = &cobra.Command{
 
 		if conf.Source.String() == "" {
 			log.Fatalln("error: missing required flag --source")
+		}
+
+		if bridgeKeyValue == "" && cBK != "" {
+			conf.KeyValue = cBK
 		}
 
 		// Check if key or key-value is set, they are mutually exclusive.
