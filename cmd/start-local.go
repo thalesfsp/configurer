@@ -19,7 +19,7 @@ var startCmd = &cobra.Command{
 		cBSe := os.Getenv("CONFIGURER_BRIDGE_SERVER")
 		cBSo := os.Getenv("CONFIGURER_BRIDGE_SOURCE")
 
-		if bridgeDestination != "" && cBD != "" {
+		if bridgeDestination == "" && cBD != "" {
 			bridgeDestination = cBD
 		}
 
