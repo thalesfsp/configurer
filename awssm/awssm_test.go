@@ -183,7 +183,11 @@ func TestNew(t *testing.T) {
 		}
 
 		// Get the underlying AWS client for cleanup.
-		awssm := provider.(*AWSSM)
+		awssm, ok := provider.(*AWSSM)
+		if !ok {
+			t.Fatalf("expected provider to be of type *AWSSM, got %T", provider)
+		}
+
 		client := awssm.client
 
 		//////

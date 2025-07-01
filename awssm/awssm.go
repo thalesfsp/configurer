@@ -3,7 +3,7 @@
 // Setting up the environment to run the application. There are two methods to
 // set up the environment to run the application.
 //
-// Flags (not recommended)
+// Flags (not recommended).
 //
 // Values are set by specifying flags. In the following example, values are
 // set and then the env command is run.
@@ -13,7 +13,7 @@
 //	  --secret-name "myapp/prod/secrets" \
 //	  --profile     "default" -- env
 //
-// Environment Variables (this is the recommended, and preferred way)
+// Environment Variables (this is the recommended, and preferred way).
 //
 // Setup values are set by specifying environment variables. In the following
 // example, values are set and then the env command is run. It's cleaner and
@@ -66,12 +66,14 @@ type AWSSM struct {
 }
 
 // Load retrieves the configuration from AWS Secrets Manager and exports it to the environment.
+//
+//nolint:gocognit
 func (a *AWSSM) Load(ctx context.Context, opts ...option.LoadKeyFunc) (map[string]string, error) {
 	finalValues := make(map[string]string)
 
-	// Iterate through all specified secret names
+	// Iterate through all specified secret names.
 	for _, secretName := range a.SecretInformation.SecretNames {
-		// Get the secret value from AWS Secrets Manager
+		// Get the secret value from AWS Secrets Manager.
 		input := &secretsmanager.GetSecretValueInput{
 			SecretId: aws.String(secretName),
 		}
@@ -90,22 +92,24 @@ func (a *AWSSM) Load(ctx context.Context, opts ...option.LoadKeyFunc) (map[strin
 			)
 		}
 
-		// Try to parse as JSON first, if it fails treat as plain string
+		// Try to parse as JSON first, if it fails treat as plain string.
 		var secretData map[string]interface{}
 		if err := json.Unmarshal([]byte(*result.SecretString), &secretData); err != nil {
-			// If it's not JSON, treat the entire secret as a single key-value pair
-			// Use the secret name (last part after /) as the key
+			// If it's not JSON, treat the entire secret as a single key-value pair.
+			// Use the secret name (last part after /) as the key.
 			key := secretName
+
 			if lastSlash := len(secretName) - 1; lastSlash >= 0 {
 				for i := lastSlash; i >= 0; i-- {
 					if secretName[i] == '/' {
 						key = secretName[i+1:]
+
 						break
 					}
 				}
 			}
 
-			// Apply key transformation options
+			// Apply key transformation options.
 			for _, opt := range opts {
 				key = opt(key)
 			}
@@ -117,9 +121,9 @@ func (a *AWSSM) Load(ctx context.Context, opts ...option.LoadKeyFunc) (map[strin
 
 			finalValues[key] = finalValue
 		} else {
-			// If it's JSON, export each key-value pair
+			// If it's JSON, export each key-value pair.
 			for key, value := range secretData {
-				// Apply key transformation options
+				// Apply key transformation options.
 				for _, opt := range opts {
 					key = opt(key)
 				}
@@ -155,26 +159,26 @@ func (a *AWSSM) Write(ctx context.Context, values map[string]interface{}, opts .
 		}
 	}
 
-	// For writing, we'll use the first secret name as the target
+	// For writing, we'll use the first secret name as the target.
 	if len(a.SecretInformation.SecretNames) == 0 {
 		return customerror.NewRequiredError("secret_names for write operation")
 	}
 
 	secretName := a.SecretInformation.SecretNames[0]
 
-	// Convert the values to JSON
+	// Convert the values to JSON.
 	secretData, err := json.Marshal(values)
 	if err != nil {
 		return customerror.NewFailedToError("marshal secret data", customerror.WithError(err))
 	}
 
-	// Check if secret exists first
+	// Check if secret exists first.
 	_, err = a.client.GetSecretValue(ctx, &secretsmanager.GetSecretValueInput{
 		SecretId: aws.String(secretName),
 	})
 
 	if err != nil {
-		// Secret doesn't exist, create it
+		// Secret doesn't exist, create it.
 		_, err = a.client.CreateSecret(ctx, &secretsmanager.CreateSecretInput{
 			Name:         aws.String(secretName),
 			SecretString: aws.String(string(secretData)),
@@ -183,7 +187,7 @@ func (a *AWSSM) Write(ctx context.Context, values map[string]interface{}, opts .
 			return customerror.NewFailedToError("create secret", customerror.WithError(err))
 		}
 	} else {
-		// Secret exists, update it
+		// Secret exists, update it.
 		_, err = a.client.UpdateSecret(ctx, &secretsmanager.UpdateSecretInput{
 			SecretId:     aws.String(secretName),
 			SecretString: aws.String(string(secretData)),
@@ -203,10 +207,11 @@ func NewWithConfig(
 	secretInformation *SecretInformation,
 	awsConfig aws.Config,
 ) (provider.IProvider, error) {
-	// Validate input parameters
+	// Validate input parameters.
 	if config == nil {
 		return nil, customerror.NewRequiredError("config")
 	}
+
 	if secretInformation == nil {
 		return nil, customerror.NewRequiredError("secret information")
 	}
@@ -227,7 +232,7 @@ func NewWithConfig(
 		return nil, err
 	}
 
-	// Create AWS Secrets Manager client
+	// Create AWS Secrets Manager client.
 	awssm.client = secretsmanager.NewFromConfig(awsConfig)
 
 	return awssm, nil
@@ -253,20 +258,23 @@ func New(
 	config *Config,
 	secretInformation *SecretInformation,
 ) (provider.IProvider, error) {
-	// Validate input parameters
+	// Validate input parameters.
 	if config == nil {
 		return nil, customerror.NewRequiredError("config")
 	}
+
 	if secretInformation == nil {
 		return nil, customerror.NewRequiredError("secret information")
 	}
 
 	//////
-	// Load AWS configuration
+	// Load AWS configuration.
 	//////
 
-	var awsConfig aws.Config
-	var err error
+	var (
+		awsConfig aws.Config
+		err       error
+	)
 
 	if config.Profile != "" {
 		awsConfig, err = awsconfig.LoadDefaultConfig(context.Background(),

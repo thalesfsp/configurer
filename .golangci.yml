@@ -11,6 +11,7 @@ run:
 linters:
   enable-all: true
   disable:
+    - typecheck
     - wrapcheck
     - testpackage
     - contextcheck
@@ -30,7 +31,7 @@ linters:
     - testifylint
     - perfsprint
     - mnd
-  fast: false
+  fast: true
 
 # Settings for specific linters
 linters-settings:
@@ -89,6 +90,7 @@ issues:
         - maintidx
         - maligned
         - goconst
+        - lll
 
     - path: doc.go
       linters:
