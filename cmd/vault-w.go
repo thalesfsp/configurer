@@ -49,6 +49,8 @@ NOTE: If no app role is set, the provider will default to using token.`,
 			Address:   cmd.Flag("address").Value.String(),
 			AppRole:   cmd.Flag("app-role").Value.String(),
 			Namespace: cmd.Flag("namespace").Value.String(),
+			RoleID:    cmd.Flag("role-id").Value.String(),
+			SecretID:  cmd.Flag("secret-id").Value.String(),
 			Token:     cmd.Flag("token").Value.String(),
 		}
 
@@ -73,13 +75,19 @@ NOTE: If no app role is set, the provider will default to using token.`,
 func init() {
 	writeCmd.AddCommand(vaultWCmd)
 
+	// Connection.
 	vaultWCmd.Flags().StringP("address", "a", os.Getenv("VAULT_ADDR"), "Address of the Vault server")
-	vaultWCmd.Flags().StringP("app-role", "r", os.Getenv("VAULT_APP_ROLE"), "AppRole to use for authentication")
 	vaultWCmd.Flags().StringP("namespace", "n", os.Getenv("VAULT_NAMESPACE"), "Vault namespace to use for authentication")
-	vaultWCmd.Flags().StringP("token", "t", os.Getenv("VAULT_TOKEN"), "Token to use for authentication")
 
-	vaultWCmd.Flags().StringP("mount-path", "m", "", "Mount path of the secret")
-	vaultWCmd.Flags().StringP("secret-path", "p", "", "Path of the secret")
+	// Path to secret.
+	vaultWCmd.Flags().StringP("mount-path", "m", os.Getenv("VAULT_MOUNT_PATH"), "Mount path of the secret")
+	vaultWCmd.Flags().StringP("secret-path", "p", os.Getenv("VAULT_SECRET_PATH"), "Path of the secret")
+
+	// Auth.
+	vaultWCmd.Flags().StringP("token", "t", os.Getenv("VAULT_TOKEN"), "Token to use for authentication")
+	vaultWCmd.Flags().StringP("app-role", "r", os.Getenv("VAULT_APP_ROLE"), "AppRole to use for authentication")
+	vaultWCmd.Flags().String("role-id", os.Getenv("VAULT_APP_ROLE_ID"), "AppRole Role ID")
+	vaultWCmd.Flags().String("secret-id", os.Getenv("VAULT_APP_SECRET_ID"), "AppRole Secret ID")
 
 	vaultWCmd.SetUsageTemplate(providerUsageTemplate)
 }
