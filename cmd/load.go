@@ -58,7 +58,7 @@ func init() {
 	loadCmd.PersistentFlags().DurationVarP(
 		&shutdownTimeout,
 		"shutdown-timeout",
-		"s",
+		"S",
 		30*time.Second,
 		"The timeout to wait for the command to shutdown",
 	)
