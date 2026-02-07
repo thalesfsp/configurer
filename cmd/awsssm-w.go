@@ -56,7 +56,7 @@ Values can be specified in two ways:
   configurer w awsssm --path /myapp/prod -f config.env
 
 The file should be in .env format (KEY=value per line).`,
-	Run: func(cmd *cobra.Command, args []string) {
+	Run: func(cmd *cobra.Command, _ []string) {
 		//////
 		// Validation.
 		//////

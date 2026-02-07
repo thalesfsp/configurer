@@ -46,15 +46,15 @@ type ParameterInformation struct {
 
 // AWSSSM provider definition.
 type AWSSSM struct {
-	client             *ssm.Client `json:"-" validate:"required"`
-	*provider.Provider `json:"-"   validate:"required"`
-
+	*provider.Provider    `json:"-" validate:"required"`
 	*Config               `json:"-" validate:"required"`
 	*ParameterInformation `json:"-" validate:"required"`
+
+	client *ssm.Client `json:"-" validate:"required"`
 }
 
 // extractKeyFromPath extracts the parameter name from a full path.
-// For example, "/myapp/prod/DB_HOST" -> "DB_HOST"
+// For example, "/myapp/prod/DB_HOST" -> "DB_HOST".
 func extractKeyFromPath(path string) string {
 	parts := strings.Split(path, "/")
 	if len(parts) == 0 {
@@ -65,8 +65,6 @@ func extractKeyFromPath(path string) string {
 }
 
 // Load retrieves parameters from AWS SSM Parameter Store and exports them to the environment.
-//
-//nolint:gocognit
 func (a *AWSSSM) Load(ctx context.Context, opts ...option.LoadKeyFunc) (map[string]string, error) {
 	finalValues := make(map[string]string)
 
@@ -146,10 +144,7 @@ func (a *AWSSSM) loadByNames(ctx context.Context, finalValues map[string]string,
 	names := a.ParameterInformation.ParameterNames
 
 	for i := 0; i < len(names); i += batchSize {
-		end := i + batchSize
-		if end > len(names) {
-			end = len(names)
-		}
+		end := min(i+batchSize, len(names))
 
 		batch := names[i:end]
 
