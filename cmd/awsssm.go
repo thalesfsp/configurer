@@ -161,6 +161,11 @@ more secure.
 			config.Region = region
 		}
 
+		// When no profile or access keys, still set region from flag.
+		if profile == "" && accessKey == "" && secretKey == "" {
+			config.Region = region
+		}
+
 		//////
 		// Handle parameter info from flags or environment variables.
 		//////

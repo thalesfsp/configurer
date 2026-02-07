@@ -17,12 +17,10 @@ import (
 func TestNew(t *testing.T) {
 	// Should only run if integration tests are enabled.
 	//
-	// NOTE: To run locally, comment the following.
+	// NOTE: To run locally, set testing-integration=1.
 	if os.Getenv("testing-integration") == "" {
-		t.Skip("skipping integration test")
+		t.Skip("skipping integration test; set testing-integration=1 to run")
 	}
-
-	t.Skip("skipping integration because it requires an AWS account. If you want to run this test, please provide your AWS credentials.")
 
 	defaultConfig := &Config{
 		// NOTE: Update bellow accordingly.
@@ -271,6 +269,8 @@ func TestExtractKeyFromPath(t *testing.T) {
 		{"DB_HOST", "DB_HOST"},
 		{"/single", "single"},
 		{"", ""},
+		{"/myapp/prod/", "prod"},           // trailing slash
+		{"/myapp/prod/DB_HOST/", "DB_HOST"}, // trailing slash with value
 	}
 
 	for _, tt := range tests {

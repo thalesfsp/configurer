@@ -40,7 +40,8 @@ type ParameterInformation struct {
 	Recursive bool `json:"recursive"`
 
 	// WithDecryption determines whether to decrypt SecureString parameters.
-	// Defaults to true.
+	// When using the CLI, this defaults to true (decryption enabled).
+	// When using the library directly, set this explicitly.
 	WithDecryption bool `json:"with_decryption"`
 }
 
@@ -55,10 +56,16 @@ type AWSSSM struct {
 
 // extractKeyFromPath extracts the parameter name from a full path.
 // For example, "/myapp/prod/DB_HOST" -> "DB_HOST".
-func extractKeyFromPath(path string) string {
-	parts := strings.Split(path, "/")
+func extractKeyFromPath(paramPath string) string {
+	// Handle trailing slashes.
+	paramPath = strings.TrimSuffix(paramPath, "/")
+	if paramPath == "" {
+		return ""
+	}
+
+	parts := strings.Split(paramPath, "/")
 	if len(parts) == 0 {
-		return path
+		return paramPath
 	}
 
 	return parts[len(parts)-1]

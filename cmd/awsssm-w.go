@@ -5,29 +5,27 @@ import (
 	"context"
 	"log"
 	"os"
+	"time"
 
 	"github.com/spf13/cobra"
 	"github.com/thalesfsp/configurer/awsssm"
-	"github.com/thalesfsp/configurer/option"
+	"github.com/thalesfsp/configurer/util"
 )
 
 // awsssmWriteCmd represents the awsssm write command.
 var awsssmWriteCmd = &cobra.Command{
-	Aliases: []string{"awsssm", "ssm"},
+	Aliases: []string{"ssm"},
 	Short:   "AWS SSM Parameter Store provider (write)",
 	Use:     "awsssm",
-	Example: `  # Write parameters under a path
-  configurer w awsssm -r us-east-1 --path /myapp/prod -v DB_HOST=localhost -v DB_PORT=5432
-
-  # Write from a file
-  configurer w awsssm -r us-east-1 --path /myapp/prod -f config.env`,
+	Example: "  configurer w --source dev.env awsssm -r us-east-1 --path /myapp/prod",
 	Long: `AWS SSM Parameter Store provider (write) will store parameters in AWS Systems
 Manager Parameter Store.
 
 Parameters are written as SecureString by default for security. They are
-stored under the specified path prefix.
+stored under the specified path prefix. Each key-value pair from the source
+file becomes a separate parameter.
 
-For example, with --path /myapp/prod and -v DB_HOST=localhost:
+For example, with --path /myapp/prod and source containing DB_HOST=localhost:
   -> Creates parameter /myapp/prod/DB_HOST with value "localhost"
 
 The provider supports the following authentication methods:
@@ -43,20 +41,46 @@ The following environment variables can be used to configure the provider:
 
 NOTE: It's recommended to use IAM roles for authentication instead of access keys.
 
-## Values to write
+## Setting up the environment to run the application
 
-Values can be specified in two ways:
+There are two methods to set up the environment to run the application.
 
-### Using -v flag
+### Flags (not recommended)
 
-  configurer w awsssm --path /myapp/prod -v KEY1=value1 -v KEY2=value2
+Values are set by specifying flags. In the following example, values are
+set and configuration is written to AWS SSM Parameter Store.
 
-### Using a file
+  configurer w --source dev.env awsssm \
+      --region  "us-east-1" \
+      --path    "/myapp/prod" \
+      --profile "default"
 
-  configurer w awsssm --path /myapp/prod -f config.env
+### Environment Variables (this is the recommended, and preferred way)
 
-The file should be in .env format (KEY=value per line).`,
+Setup values are set by specifying environment variables. In the following
+example, values are set and configuration is written. It's cleaner and
+more secure.
+
+  export AWS_REGION="us-east-1"
+  export AWS_PROFILE="default"
+  export AWSSSM_PATH="/myapp/prod"
+
+  configurer w --source dev.env awsssm`,
 	Run: func(cmd *cobra.Command, _ []string) {
+		// Context with timeout.
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		defer cancel()
+
+		f, err := os.Open(sourceFilename)
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		parsedFile, err := util.ParseFile(ctx, f)
+		if err != nil {
+			log.Fatalln(err)
+		}
+
 		//////
 		// Validation.
 		//////
@@ -86,6 +110,11 @@ The file should be in .env format (KEY=value per line).`,
 			log.Fatalln("if --secret-key is specified, --access-key must also be specified")
 		}
 
+		// Ensure if secret key is specified, access key must also be specified.
+		if secretKey == "" && accessKey != "" {
+			log.Fatalln("if --access-key is specified, --secret-key must also be specified")
+		}
+
 		//////
 		// Build config.
 		//////
@@ -103,6 +132,11 @@ The file should be in .env format (KEY=value per line).`,
 		if accessKey != "" && secretKey != "" {
 			config.AccessKey = accessKey
 			config.SecretKey = secretKey
+			config.Region = region
+		}
+
+		// When no profile or access keys, still set region from flag.
+		if profile == "" && accessKey == "" && secretKey == "" {
 			config.Region = region
 		}
 
@@ -125,134 +159,12 @@ The file should be in .env format (KEY=value per line).`,
 			log.Fatalln(err)
 		}
 
-		//////
-		// Collect values to write.
-		//////
-
-		valuesToWrite := make(map[string]interface{})
-
-		// Get values from -v flags.
-		values, err := cmd.Flags().GetStringSlice("value")
-		if err != nil {
+		if err := awsssmProvider.Write(ctx, parsedFile); err != nil {
 			log.Fatalln(err)
 		}
 
-		for _, v := range values {
-			parts := splitKeyValue(v)
-			if len(parts) == 2 {
-				valuesToWrite[parts[0]] = parts[1]
-			}
-		}
-
-		// Get values from file if specified.
-		filename, _ := cmd.Flags().GetString("file")
-		if filename != "" {
-			fileValues, err := loadValuesFromFile(filename)
-			if err != nil {
-				log.Fatalln(err)
-			}
-
-			for k, v := range fileValues {
-				valuesToWrite[k] = v
-			}
-		}
-
-		if len(valuesToWrite) == 0 {
-			log.Fatalln("no values to write; use -v KEY=value or -f filename")
-		}
-
-		//////
-		// Write values.
-		//////
-
-		var options []option.WriteFunc
-
-		if err := awsssmProvider.Write(context.Background(), valuesToWrite, options...); err != nil {
-			log.Fatalln(err)
-		}
-
-		log.Printf("Successfully wrote %d parameter(s) to %s", len(valuesToWrite), path)
+		os.Exit(0)
 	},
-}
-
-// splitKeyValue splits a KEY=value string into its parts.
-func splitKeyValue(s string) []string {
-	for i := 0; i < len(s); i++ {
-		if s[i] == '=' {
-			return []string{s[:i], s[i+1:]}
-		}
-	}
-
-	return []string{s}
-}
-
-// loadValuesFromFile loads key=value pairs from a file.
-func loadValuesFromFile(filename string) (map[string]string, error) {
-	data, err := os.ReadFile(filename)
-	if err != nil {
-		return nil, err
-	}
-
-	values := make(map[string]string)
-	lines := splitLines(string(data))
-
-	for _, line := range lines {
-		line = trimSpace(line)
-
-		// Skip empty lines and comments.
-		if line == "" || line[0] == '#' {
-			continue
-		}
-
-		parts := splitKeyValue(line)
-		if len(parts) == 2 {
-			values[parts[0]] = parts[1]
-		}
-	}
-
-	return values, nil
-}
-
-// splitLines splits a string into lines.
-func splitLines(s string) []string {
-	var lines []string
-
-	start := 0
-
-	for i := 0; i < len(s); i++ {
-		if s[i] == '\n' {
-			line := s[start:i]
-			if len(line) > 0 && line[len(line)-1] == '\r' {
-				line = line[:len(line)-1]
-			}
-
-			lines = append(lines, line)
-			start = i + 1
-		}
-	}
-
-	if start < len(s) {
-		lines = append(lines, s[start:])
-	}
-
-	return lines
-}
-
-// trimSpace removes leading and trailing whitespace.
-func trimSpace(s string) string {
-	start := 0
-
-	for start < len(s) && (s[start] == ' ' || s[start] == '\t') {
-		start++
-	}
-
-	end := len(s)
-
-	for end > start && (s[end-1] == ' ' || s[end-1] == '\t') {
-		end--
-	}
-
-	return s[start:end]
 }
 
 func init() {
@@ -268,11 +180,6 @@ func init() {
 
 	// Path.
 	awsssmWriteCmd.Flags().String("path", os.Getenv("AWSSSM_PATH"), "Parameter path prefix for writing (e.g., /myapp/prod)")
-	awsssmWriteCmd.MarkFlagRequired("path")
-
-	// Values.
-	awsssmWriteCmd.Flags().StringSliceP("value", "v", nil, "Key=value pair to write (can be repeated)")
-	awsssmWriteCmd.Flags().StringP("file", "f", "", "File containing key=value pairs to write")
 
 	awsssmWriteCmd.SetUsageTemplate(providerUsageTemplate)
 }
