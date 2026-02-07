@@ -30,24 +30,17 @@ linters:
     - perfsprint
     - mnd
     - wsl
-    - wsl_v5
     - nlreturn
-    - godoclint
-    - noinlineerr
     - funlen
     - gocognit
     - noctx
     - staticcheck
-    - modernize
     - errcheck
-    - embeddedstructfieldcheck
-    - funcorder
     - intrange
     - gosec
     - nestif
     - goconst
     - prealloc
-    - usetesting
     - lll
     - maintidx
     - gochecknoinits
@@ -83,12 +76,10 @@ issues:
 
     - path: awsssm/
       linters:
-        - funcorder
         - lll
 
     - path: awssm/
       linters:
-        - funcorder
         - lll
 
     - path: example_test.go
