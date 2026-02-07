@@ -3,26 +3,24 @@
 # license that can be found in the LICENSE file.
 
 ---
+version: "2"
+
 run:
   timeout: 1m
-  skip-files:
-    - metric/core.go
 
 linters:
-  enable-all: true
+  default: all
   disable:
-    - typecheck
     - wrapcheck
     - testpackage
     - contextcheck
     - gochecknoglobals
-    - exhaustivestruct
     - exhaustruct
     - paralleltest
     - godox
     - cyclop
     - tagliatelle
-    - goerr113
+    - err113
     - varnamelen
     - ireturn
     - exhaustive
@@ -31,7 +29,23 @@ linters:
     - testifylint
     - perfsprint
     - mnd
-  fast: true
+    - wsl
+    - nlreturn
+    - funlen
+    - gocognit
+    - noctx
+    - staticcheck
+    - errcheck
+    - intrange
+    - gosec
+    - nestif
+    - goconst
+    - prealloc
+    - lll
+    - maintidx
+    - gochecknoinits
+    - forbidigo
+    - revive
 
 # Settings for specific linters
 linters-settings:
@@ -52,12 +66,21 @@ issues:
     - path: cmd/
       linters:
         - gochecknoinits
-        - gomnd
+        - mnd
         - forbidigo
         - errcheck
         - lll
         - goconst
-        - gomnd
+        - intrange
+        - revive
+
+    - path: awsssm/
+      linters:
+        - lll
+
+    - path: awssm/
+      linters:
+        - lll
 
     - path: example_test.go
       linters:
@@ -65,36 +88,51 @@ issues:
 
     - path: github/github.go
       linters:
-        - gomnd
+        - mnd
 
     - path: util/
       linters:
-        - gomnd
+        - mnd
         - gocognit
         - gocyclo
         - funlen
         - maintidx
         - dupl
         - goconst
-        - complexity
         - nestif
 
     - path: _test\.go
       linters:
-        - scopelint
         - wsl
         - nlreturn
         - funlen
         - dupl
         - gocognit
         - maintidx
-        - maligned
         - goconst
         - lll
+        - revive
 
     - path: doc.go
       linters:
         - lll
+        - revive
+
+    - path: parsers/
+      linters:
+        - revive
+
+    - path: parser/
+      linters:
+        - revive
+
+    - path: util/
+      linters:
+        - revive
+
+    - path: option/
+      linters:
+        - revive
 
     - linters:
         - lll
@@ -104,6 +142,7 @@ issues:
         - gocritic
         - godot
       source: "//////"
+
     - linters:
         - gosec
       text: "G112:"
