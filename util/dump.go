@@ -181,7 +181,6 @@ func DumpToJSON(file *os.File, content map[string]string) error {
 	}
 
 	// Flush the file.
-	// Flush the file.
 	if err := file.Sync(); err != nil {
 		return customerror.NewFailedToError("flush "+file.Name()+" file", customerror.WithError(err))
 	}

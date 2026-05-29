@@ -13,6 +13,7 @@ import (
 	"github.com/thalesfsp/configurer/parsers/env"
 	"github.com/thalesfsp/configurer/parsers/jsonp"
 	"github.com/thalesfsp/configurer/parsers/toml"
+	"github.com/thalesfsp/configurer/parsers/yaml"
 	"github.com/thalesfsp/customerror"
 	"github.com/thalesfsp/validation"
 )
@@ -91,7 +92,7 @@ func ParseContent(ctx context.Context, format string, r io.Reader) (map[string]a
 
 		return r, nil
 	case format == "yaml" || format == "yml":
-		p, err := env.New()
+		p, err := yaml.New()
 		if err != nil {
 			return nil, err
 		}
