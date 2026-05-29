@@ -95,7 +95,7 @@ func LoadConfiguration[T any](
 
 	if len(data) < 1 {
 		// Convert default config to YAML.
-		data, err := yaml.Marshal(defaultConfiguration)
+		marshaled, err := yaml.Marshal(defaultConfiguration)
 		if err != nil {
 			return nil, customerror.NewFailedToError("marshal default config: %w",
 				customerror.WithError(err),
@@ -103,13 +103,13 @@ func LoadConfiguration[T any](
 		}
 
 		// Write yaml to file.
-		if err := os.WriteFile(filePath, data, fileperm); err != nil {
+		if err := os.WriteFile(filePath, marshaled, fileperm); err != nil {
 			return nil, customerror.NewFailedToError("write default config: %w",
 				customerror.WithError(err),
 			)
 		}
 
-		c = defaultConfiguration
+		return defaultConfiguration, nil
 	}
 
 	if err := yaml.Unmarshal(data, c); err != nil {
