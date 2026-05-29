@@ -224,6 +224,17 @@ func Delete(ctx context.Context, v *GitHub, secrets ...string) error {
 	return nil
 }
 
+// publicKeyForTarget returns the public key matching the given target. It
+// defaults to the Actions key (the default target) for any value other than
+// Codespaces.
+func (v *GitHub) publicKeyForTarget(target string) *PublicKeyResponse {
+	if target == Codespaces.String() {
+		return v.publicKeyResponseCodespace
+	}
+
+	return v.publicKeyResponseActions
+}
+
 //////
 // IProvider implementation.
 //////
@@ -264,20 +275,24 @@ func (v *GitHub) Write(ctx context.Context, values map[string]interface{}, opts 
 		repository = repo
 	}
 
+	// Select the public key matching the target so the encrypted value and the
+	// key_id sent to GitHub belong to the same key.
+	publicKey := v.publicKeyForTarget(options.Target)
+
 	_, err := concurrentloop.MapM(ctx, values, func(ctx context.Context, key string, item any) (bool, error) {
 		variableRequest := &VariableRequest{
 			Name:  key,
 			Value: fmt.Sprintf("%v", item),
 		}
 
-		encryptedValue, err := encrypt(v.publicKeyResponseCodespace.Key, fmt.Sprintf("%v", item))
+		encryptedValue, err := encrypt(publicKey.Key, fmt.Sprintf("%v", item))
 		if err != nil {
 			return false, err
 		}
 
 		secretRequest := &SecretRequest{
 			EncryptedValue: encryptedValue,
-			KeyID:          v.publicKeyResponseCodespace.KeyID,
+			KeyID:          publicKey.KeyID,
 		}
 
 		finalVerb, finalURL, finalReqBody := v.constructRequestDetails(
@@ -358,7 +373,9 @@ func (v *GitHub) constructRequestDetails(
 	}
 
 	if forceVerb != "" {
-		if options.Variable {
+		// Only the environment-scoped variable URL needs the repository ID, so
+		// guard against a nil repository (no environment was set).
+		if options.Variable && repository != nil {
 			finalURL = fmt.Sprintf(
 				"https://api.github.com/repositories/%d/environments/%s/variables/%s",
 				repository.ID,
