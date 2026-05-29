@@ -80,7 +80,7 @@ func init() {
 	)
 
 	loadCmd.PersistentFlags().StringVar(
-		&keyPrefixerOptions,
+		&keySuffixerOptions,
 		"key-suffixer",
 		"",
 		"Set the key suffix",
