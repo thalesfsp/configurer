@@ -232,17 +232,17 @@ func parseValueForInterface(str string) (interface{}, error) {
 		}
 	}
 
-	// Check for int first
+	// Check for int.
 	if i, err := strconv.Atoi(str); err == nil {
 		return i, nil
 	}
 
-	// Check for int64 first, as ParseInt handles integers correctly
+	// Check for int64.
 	if i, err := strconv.ParseInt(str, 10, 64); err == nil {
 		return i, nil
 	}
 
-	// Check for uint64 next
+	// Check for uint64.
 	if u, err := strconv.ParseUint(str, 10, 64); err == nil {
 		return u, nil
 	}
@@ -425,7 +425,7 @@ func setValueFromTag(v reflect.Value, field reflect.StructField, tag string, con
 
 // process a struct and its fields. Use it to build your own custom tag handler.
 //
-//nolint:errcheck,intrange
+//nolint:intrange
 func process(tagName string, s any, cb Func) error {
 	v := reflect.ValueOf(s)
 
@@ -455,7 +455,10 @@ func process(tagName string, s any, cb Func) error {
 		}
 
 		if customtag != "" {
-			cb(value, field, customtag) // Pass the value directly.
+			// Pass the value directly, propagating any error from the handler.
+			if err := cb(value, field, customtag); err != nil {
+				return err
+			}
 		}
 
 		if value.Kind() == reflect.Ptr && !value.IsNil() {

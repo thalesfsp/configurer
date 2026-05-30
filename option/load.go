@@ -50,21 +50,18 @@ func WithKeySuffixer(suffix string) LoadKeyFunc {
 // SEE: github.com/iancoleman/strcase.
 func WithKeyCaser(caseType string) LoadKeyFunc {
 	return func(key string) string {
-		// Do nothing is the case type is not allowed.
-		if !strings.Contains(strings.Join(AllowedCases, ","), caseType) {
-			return key
-		}
-
+		// Do nothing if the case type is not one of the allowed cases (handled
+		// by the default branch below).
 		switch caseType {
-		case "snake":
+		case Snake:
 			return strcase.ToSnake(key)
-		case "camel":
+		case Camel:
 			return strcase.ToCamel(key)
-		case "kebab":
+		case Kebab:
 			return strcase.ToKebab(key)
-		case "lower":
+		case Lower:
 			return strings.ToLower(key)
-		case "upper":
+		case Upper:
 			return strings.ToUpper(key)
 		default:
 			return key

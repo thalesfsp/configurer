@@ -34,6 +34,13 @@ import (
 // Regex pattern for .env extensions (.env, .env.local, .env.prod, etc.)
 var envRegex = regexp.MustCompile(`^\.env(\..+)?$`)
 
+// shouldUseElasticsearch reports whether the configured log outputs request the
+// ElasticSearch output. The comma-separated list of outputs must contain the
+// "elasticsearch" token as a substring.
+func shouldUseElasticsearch(logOutputsStr string) bool {
+	return strings.Contains(logOutputsStr, "elasticsearch")
+}
+
 // CommandArgs represents the command and its arguments.
 type CommandArgs struct {
 	// Arguments to pass to the command.
@@ -195,7 +202,7 @@ func runCommand(
 		cliLogger.Debugln("directing output to", logOutputsStr)
 	}
 
-	if strings.ContainsAny(logOutputsStr, "elasticsearch") {
+	if shouldUseElasticsearch(logOutputsStr) {
 		bufStdOut := new(bytes.Buffer)
 		bufStdErr := new(bytes.Buffer)
 

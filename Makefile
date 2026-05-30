@@ -15,7 +15,7 @@ HAS_GODOC := $(shell command -v godoc;)
 HAS_GOLANGCI := $(shell command -v golangci-lint;)
 HAS_GORELEASER := $(shell command -v goreleaser;)
 
-GOLANGCI_VERSION := v1.61.0
+GOLANGCI_VERSION := v2.5.0
 GORELEASER_VERSION := v2.4.8
 
 default: ci
@@ -47,7 +47,7 @@ endif
 lint:
 ifndef HAS_GOLANGCI
 	@echo "Could not find golangci-list, installing it"
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_VERSION)
+	@go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(GOLANGCI_VERSION)
 endif
 	@golangci-lint run -v -c .golangci.yml && echo "Lint OK"
 
