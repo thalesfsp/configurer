@@ -224,17 +224,6 @@ func Delete(ctx context.Context, v *GitHub, secrets ...string) error {
 	return nil
 }
 
-// publicKeyForTarget returns the public key matching the given target. It
-// defaults to the Actions key (the default target) for any value other than
-// Codespaces.
-func (v *GitHub) publicKeyForTarget(target string) *PublicKeyResponse {
-	if target == Codespaces.String() {
-		return v.publicKeyResponseCodespace
-	}
-
-	return v.publicKeyResponseActions
-}
-
 //////
 // IProvider implementation.
 //////
@@ -319,6 +308,17 @@ func (v *GitHub) Write(ctx context.Context, values map[string]interface{}, opts 
 	)
 
 	return err
+}
+
+// publicKeyForTarget returns the public key matching the given target. It
+// defaults to the Actions key (the default target) for any value other than
+// Codespaces.
+func (v *GitHub) publicKeyForTarget(target string) *PublicKeyResponse {
+	if target == Codespaces.String() {
+		return v.publicKeyResponseCodespace
+	}
+
+	return v.publicKeyResponseActions
 }
 
 func (v *GitHub) constructRequestDetails(
