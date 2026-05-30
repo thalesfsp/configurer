@@ -56,102 +56,101 @@ linters:
     - embeddedstructfieldcheck
     - funcorder
 
-# Settings for specific linters
-linters-settings:
-  funlen:
-    lines: 175
-    statements: 80
+  settings:
+    funlen:
+      lines: 175
+      statements: 80
 
-  nestif:
-    min-complexity: 8
+    nestif:
+      min-complexity: 8
 
-  revive:
+    revive:
+      rules:
+        - name: unused-parameter
+          disabled: true
+
+  exclusions:
     rules:
-      - name: unused-parameter
-        disabled: true
+      - path: cmd/
+        linters:
+          - gochecknoinits
+          - mnd
+          - forbidigo
+          - errcheck
+          - lll
+          - goconst
+          - intrange
+          - revive
 
-issues:
-  exclude-rules:
-    - path: cmd/
-      linters:
-        - gochecknoinits
-        - mnd
-        - forbidigo
-        - errcheck
-        - lll
-        - goconst
-        - intrange
-        - revive
+      - path: awsssm/
+        linters:
+          - lll
 
-    - path: awsssm/
-      linters:
-        - lll
+      - path: awssm/
+        linters:
+          - lll
 
-    - path: awssm/
-      linters:
-        - lll
+      - path: example_test.go
+        linters:
+          - lll
 
-    - path: example_test.go
-      linters:
-        - lll
+      - path: github/github.go
+        linters:
+          - mnd
 
-    - path: github/github.go
-      linters:
-        - mnd
+      - path: util/
+        linters:
+          - mnd
+          - gocognit
+          - gocyclo
+          - funlen
+          - maintidx
+          - dupl
+          - goconst
+          - nestif
 
-    - path: util/
-      linters:
-        - mnd
-        - gocognit
-        - gocyclo
-        - funlen
-        - maintidx
-        - dupl
-        - goconst
-        - nestif
+      - path: _test\.go
+        linters:
+          - wsl
+          - nlreturn
+          - funlen
+          - dupl
+          - gocognit
+          - maintidx
+          - goconst
+          - lll
+          - revive
 
-    - path: _test\.go
-      linters:
-        - wsl
-        - nlreturn
-        - funlen
-        - dupl
-        - gocognit
-        - maintidx
-        - goconst
-        - lll
-        - revive
+      - path: doc.go
+        linters:
+          - lll
+          - revive
 
-    - path: doc.go
-      linters:
-        - lll
-        - revive
+      - path: parsers/
+        linters:
+          - revive
 
-    - path: parsers/
-      linters:
-        - revive
+      - path: parser/
+        linters:
+          - revive
 
-    - path: parser/
-      linters:
-        - revive
+      - path: util/
+        linters:
+          - revive
 
-    - path: util/
-      linters:
-        - revive
+      - path: option/
+        linters:
+          - revive
 
-    - path: option/
-      linters:
-        - revive
+      - linters:
+          - lll
+        source: "json:"
 
-    - linters:
-        - lll
-      source: "json:"
+      - linters:
+          - gocritic
+          - godot
+        source: "//////"
 
-    - linters:
-        - gocritic
-        - godot
-      source: "//////"
-
-    - linters:
-        - gosec
-      text: "G112:"
+      - linters:
+          - gosec
+        text: "G112:"
