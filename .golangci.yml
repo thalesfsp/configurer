@@ -46,6 +46,15 @@ linters:
     - gochecknoinits
     - forbidigo
     - revive
+    # Opinionated v2 linters not adopted by this codebase; disabled to avoid
+    # churning pre-existing files (house style: inline error handling, package
+    # docs in both doc.go and the main file). Re-enable as a dedicated PR.
+    - godoclint
+    - wsl_v5
+    - usetesting
+    - noinlineerr
+    - embeddedstructfieldcheck
+    - funcorder
 
 # Settings for specific linters
 linters-settings:

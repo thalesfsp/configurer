@@ -41,24 +41,19 @@ Module: `github.com/thalesfsp/configurer`. Entry point: `main.go` → `cmd.Execu
 ## Build / test / lint / release  (Makefile)
 - `make test` → `VENDOR_ENVIRONMENT=testing go test -timeout 30s -short -v -race -cover ...`
 - `make ci` → `lint test coverage`. `make ci-integration` runs integration tests.
-- Go pinned to **1.23.1** (`.tool-versions`); `go.mod` `go 1.23.0`, `toolchain go1.23.1`.
-  Do NOT let `go get` bump the toolchain directive past 1.23.1 (it sets it to whatever ran
-  it). Reset it back if it does. Newer x/crypto/x/net (≥0.40-ish) require Go 1.24+ — avoid.
+- Go pinned to **1.25.0** (`.tool-versions`); `go.mod` `go 1.25.0`, `toolchain go1.25.0`.
+  Both workflows use `go-version: "1.25"`. All deps at latest (`go get -u ./...`).
 - **Release flow:** merge PR → push a tag `vX.Y.Z` to `main` → `.github/workflows/release_build.yml`
   runs GoReleaser (+cosign) and the bot publishes the GitHub release. `resources/install.sh`
   downloads released binaries. Latest tag: **v1.3.33** (next would be v1.3.34). Nothing is
   installable until merged + tagged.
 
-### ⚠️ golangci-lint version mismatch (known tooling debt)
-- `.golangci.yml` is **v2 format** (`version: "2"`, `default: all` minus a disable-list).
-- But `Makefile` pins `GOLANGCI_VERSION := v1.61.0` and `.github/workflows/go.yml` runs
-  `golangci-lint-action@v6.1.0` with `version: v1.61.0`. GitHub CI ("Go build" check) is
-  green regardless (v1.61 effectively ignores the v2-only linters / config).
-- Running `make ci` locally with a **v2.x** golangci-lint installed surfaces ~44 issues in
-  PRE-EXISTING files (wsl_v5, godoclint, funcorder, embeddedstructfieldcheck, noinlineerr,
-  usetesting). These are NOT regressions and don't fail GitHub CI. To make local `make ci`
-  match CI, either install golangci-lint v1.61.0, or (better, future work) bump the
-  Makefile/workflow pin to v2.x AND clean up the ~44 findings as a dedicated PR.
+### golangci-lint (v2, aligned)
+- `.golangci.yml` is **v2 format**. `Makefile` pins `v2.5.0` (install path `.../v2/cmd/...`);
+  `go.yml` runs `golangci-lint-action@v6.5.0` with `version: v2.5.0`. Local `make ci` == CI.
+- v2 `default: all` enables opinionated linters the repo never adopted; DISABLED in
+  `.golangci.yml`: `godoclint`, `wsl_v5`, `usetesting`, `noinlineerr`,
+  `embeddedstructfieldcheck`, `funcorder`. Re-enable + clean up only as a dedicated PR.
 
 ## Important gotchas
 - `util.ParseContent` switch is keyed by format string; the `yaml/yml` branch must use the
@@ -84,8 +79,10 @@ Bug-fix sweep from a codebase analysis. Fixed + added a regression test per fix:
 5. `process()` swallowed setter errors → propagate (`util/process.go`).
 6. `config.LoadConfiguration` empty-file variable shadowing → return default (`config/config.go`).
 7. Minor: `dotenv.New` `rawValuebool`→`rawValue`; `WithKeyCaser` simplified; dup comment.
-Plus `build(deps)`: x/crypto v0.32→0.36 (CVE-2025-22869), x/net v0.34→0.38
-(CVE-2025-22870/22872), go-jose/v4 v4.0.4→4.0.5 (CVE-2025-27144).
+Plus `build(deps)`: ALL deps bumped to latest via `go get -u ./...` on **Go 1.25** (x/crypto
+v0.52, x/net v0.55, x/text v0.37, go-jose/v4 v4.1.4, aws-sdk-go-v2 latest, vault/api v1.23,
+…). Covers CVE-2025-22869/22870/22872/27144 and everything newer. golangci-lint aligned to
+v2.5.0 with opinionated linters disabled (see above). `make ci` + `go test -race` green.
 
 Tests added: `util/parse_test.go`, `util/process_error_test.go`, `cmd/flags_test.go`,
 `github/keyfor_test.go`, `config/config_empty_test.go`.
