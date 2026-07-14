@@ -23,12 +23,12 @@ import (
 	"github.com/thalesfsp/configurer/util"
 	"github.com/thalesfsp/customerror"
 	"github.com/thalesfsp/mole/core"
-	"github.com/thalesfsp/sypl"
-	"github.com/thalesfsp/sypl/fields"
-	"github.com/thalesfsp/sypl/flag"
-	"github.com/thalesfsp/sypl/level"
-	"github.com/thalesfsp/sypl/output"
-	"github.com/thalesfsp/sypl/processor"
+	"github.com/thalesfsp/sypl/es/v2"
+	"github.com/thalesfsp/sypl/v2"
+	"github.com/thalesfsp/sypl/v2/fields"
+	"github.com/thalesfsp/sypl/v2/flag"
+	"github.com/thalesfsp/sypl/v2/level"
+	"github.com/thalesfsp/sypl/v2/processor"
 )
 
 // Regex pattern for .env extensions (.env, .env.local, .env.prod, etc.)
@@ -233,11 +233,11 @@ func runCommand(
 			esConfig.Addresses = []string{"http://localhost:9200"}
 		}
 
-		esOutput := output.ElasticSearchWithDynamicIndex(
+		esOutput := es.OutputWithDynamicIndex(
 			func() string {
 				return fmt.Sprintf("%s-%s", esConfig.Index, time.Now().Format("2006-01"))
 			},
-			output.ElasticSearchConfig{
+			es.Config{
 				Addresses:    esConfig.Addresses,
 				APIKey:       esConfig.APIKey,
 				CloudID:      esConfig.CloudID,

@@ -254,6 +254,10 @@ github.com/thalesfsp/status v1.0.22 h1:XAajv9dp5piEIOpgaqld9RPPPEi+lbCiGHWqElmqs
 github.com/thalesfsp/status v1.0.22/go.mod h1:ZwlaaU4tPETPq/wf3bsS/sVqSQpMUPMK7iTqkSSJqVY=
 github.com/thalesfsp/sypl v1.19.20 h1:FcKm7x5Xx7k/5UPXysjELMQnpQ9x5xc9R6VzMKFH+EY=
 github.com/thalesfsp/sypl v1.19.20/go.mod h1:poTPF9XvuMAcZ1qnyLyUJhP9ivAyrODoKFMuDc/b6AU=
+github.com/thalesfsp/sypl/es/v2 v2.0.0 h1:EEVFFEL9cabgQte4qiQOFq2j1xmdnl9+zT/3wrL0ZWE=
+github.com/thalesfsp/sypl/es/v2 v2.0.0/go.mod h1:KF4tD1Yq09Nhd8qSB/C5kpgfPiHlm+Gdk5vtIjRBmlY=
+github.com/thalesfsp/sypl/v2 v2.0.0 h1:sG8R5DPKpsbq0pF+jSlEy1XNYIrhTUbfwA1duLmq5/8=
+github.com/thalesfsp/sypl/v2 v2.0.0/go.mod h1:RCM1KBOet35pLWc6VPixSPPa5neyxaGJHGeRT5CEczY=
 github.com/thalesfsp/validation v0.0.3 h1:iXWXZLALIGUKJSxAeDt40kxUyzjeHeHc86f9fP9vin4=
 github.com/thalesfsp/validation v0.0.3/go.mod h1:0jwfQpbuzVJgVSPoiDJ7KCT76CLdMq4R++InC353SZ8=
 github.com/ugorji/go/codec v0.0.0-20181204163529-d75b2dcb6bc8/go.mod h1:VFNgLljTbGfSG7qAOspJ7OScBnGdDN/yBr0sguwnwf0=
