@@ -13,7 +13,7 @@ import (
 	"github.com/thalesfsp/configurer/option"
 	"github.com/thalesfsp/configurer/provider"
 	"github.com/thalesfsp/customerror"
-	"github.com/thalesfsp/httpclient"
+	"github.com/thalesfsp/httpclient/v2"
 	"github.com/thalesfsp/validation"
 	"golang.org/x/crypto/nacl/box"
 )
@@ -457,7 +457,7 @@ func New(
 		return nil, customerror.NewRequiredError("GITHUB_TOKEN env var")
 	}
 
-	client, err := httpclient.NewDefault(Name)
+	client, err := httpclient.NewDefault(httpclient.WithClientName(Name))
 	if err != nil {
 		return nil, err
 	}
