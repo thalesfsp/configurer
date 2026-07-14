@@ -24,6 +24,8 @@ require (
 	github.com/thalesfsp/customerror v1.2.9
 	github.com/thalesfsp/godotenv v1.4.2
 	github.com/thalesfsp/httpclient v1.2.7
+	github.com/thalesfsp/sypl/es/v2 v2.0.0
+	github.com/thalesfsp/sypl/v2 v2.0.0
 	github.com/thalesfsp/validation v0.0.3
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
@@ -115,7 +117,7 @@ require (
 	github.com/ryanuber/go-glob v1.0.0 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/thalesfsp/mole v1.0.2
-	github.com/thalesfsp/sypl v1.19.20
+	github.com/thalesfsp/sypl v1.19.20 // indirect
 	golang.org/x/crypto v0.52.0
 	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/sys v0.45.0 // indirect

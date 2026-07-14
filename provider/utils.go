@@ -5,8 +5,23 @@ import (
 	"os"
 
 	"github.com/thalesfsp/customerror"
-	"github.com/thalesfsp/sypl/level"
+	"github.com/thalesfsp/sypl/v2"
+	"github.com/thalesfsp/sypl/v2/level"
+	"github.com/thalesfsp/sypl/v2/shared"
 )
+
+// anyMaxLevel reports whether any output's maxLevel equals target, or the
+// SYPL_LEVEL env var names it — v1 Sypl.AnyMaxLevel semantics. Replacement
+// for the v2-removed Sypl.AnyMaxLevel, per sypl's MIGRATION-V2.md.
+func anyMaxLevel(l *sypl.Sypl, target level.Level) bool {
+	for _, ml := range l.GetMaxLevel() { // map[outputName]level.Level
+		if ml == target {
+			return true
+		}
+	}
+
+	return os.Getenv(shared.LevelEnvVar) == target.String()
+}
 
 // ExportToEnvVar exports the given key and value to the environment.
 //
@@ -33,9 +48,9 @@ func ExportToEnvVar(p IProvider, key string, value interface{}) (string, error) 
 		)
 	}
 
-	if p.GetLogger().AnyMaxLevel(level.Debug) {
+	if anyMaxLevel(p.GetLogger().Sypl, level.Debug) {
 		p.GetLogger().Debuglnf("Exported key %s", key)
-	} else if p.GetLogger().AnyMaxLevel(level.Trace) {
+	} else if anyMaxLevel(p.GetLogger().Sypl, level.Trace) {
 		p.GetLogger().Tracelnf("Exported key %s with value %s", key, finalValue)
 	}
 
