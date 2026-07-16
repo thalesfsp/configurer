@@ -92,9 +92,12 @@ func (a *AWSSM) Load(ctx context.Context, opts ...option.LoadKeyFunc) (map[strin
 			)
 		}
 
-		// Try to parse as JSON first, if it fails treat as plain string.
-		var secretData map[string]interface{}
-		if err := json.Unmarshal([]byte(*result.SecretString), &secretData); err != nil {
+		// Try to parse as a JSON object of key/value pairs, transparently
+		// unwrapping double-encoded secrets (a JSON string that itself contains
+		// a JSON object). If it is not a JSON object, treat the entire secret as
+		// a single plain-text value.
+		secretData, isJSONObject := parseSecretData(*result.SecretString)
+		if !isJSONObject {
 			// If it's not JSON, treat the entire secret as a single key-value pair.
 			// Use the secret name (last part after /) as the key.
 			key := secretName
@@ -139,6 +142,38 @@ func (a *AWSSM) Load(ctx context.Context, opts ...option.LoadKeyFunc) (map[strin
 	}
 
 	return finalValues, nil
+}
+
+// parseSecretData interprets a secret string as a JSON object of key/value
+// pairs. It transparently unwraps secrets stored double-encoded — a JSON string
+// that itself contains a JSON object, e.g. `"{\"KEY\":\"value\"}"` — which is a
+// common result of tooling that stores a JSON payload as a quoted string. It
+// returns the parsed map and true when the secret is (possibly nested) JSON
+// object, or (nil, false) when it should be treated as a single plain-text
+// value.
+func parseSecretData(secretString string) (map[string]interface{}, bool) {
+	s := secretString
+
+	// Each iteration either parses an object (done) or peels one layer of
+	// JSON-string wrapping. Bounded to avoid pathological inputs.
+	for range 4 {
+		var secretData map[string]interface{}
+		if err := json.Unmarshal([]byte(s), &secretData); err == nil {
+			return secretData, true
+		}
+
+		// Not an object at this level: it may be a JSON-encoded string wrapping
+		// more JSON (double-encoded). Peel one layer and retry.
+		var inner string
+		if err := json.Unmarshal([]byte(s), &inner); err != nil {
+			// Neither an object nor a JSON string: genuine plain text.
+			return nil, false
+		}
+
+		s = inner
+	}
+
+	return nil, false
 }
 
 // Write stores a new secret in AWS Secrets Manager.
