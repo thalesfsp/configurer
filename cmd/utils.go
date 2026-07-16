@@ -407,6 +407,16 @@ func ConcurrentRunner(p provider.IProvider, cmds []string, args []string) {
 	if len(cmds) == 0 {
 		command, arguments := splitCmdFromArgs(args)
 
+		// Nothing to exec (e.g., a pure --dump/--override with no trailing
+		// command). The provider has already loaded and dumped its values, so
+		// exit successfully instead of failing with "exec: no command".
+		if command == "" {
+			// Wait for any output to be flushed.
+			time.Sleep(flushInterval)
+
+			os.Exit(0)
+		}
+
 		exitCode := runCommand(p, command, arguments, false)
 
 		// Wait for any output to be flushed.
