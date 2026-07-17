@@ -84,7 +84,7 @@ case $arch in
   x86_64)
     arch="amd64"
     ;;
-  arm64)
+  arm64 | aarch64)
     arch="arm64"
     ;;
   armv6l)
