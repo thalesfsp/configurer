@@ -19,6 +19,7 @@ import (
 	"github.com/thalesfsp/configurer/awsssm"
 	"github.com/thalesfsp/configurer/azkv"
 	"github.com/thalesfsp/configurer/doppler"
+	"github.com/thalesfsp/configurer/gcpsm"
 	"github.com/thalesfsp/configurer/noop"
 	"github.com/thalesfsp/configurer/provider"
 	"github.com/thalesfsp/configurer/vault"
@@ -263,6 +264,74 @@ func TestCLIProviderSuccessPathsUseLocalFakes(t *testing.T) {
 			wantInput: map[string]interface{}{
 				"config":      fakeAWSConfig("us-west-2", "", "", ""),
 				"secretNames": []string{"secret"},
+			},
+		},
+		{
+			name: "gcpsm write binds project and secret",
+			args: []string{
+				"write", "--source", sourceFile,
+				"gcpsm",
+				"--project-id", "gcp-project",
+				"--secret-name", "app-secret",
+			},
+			provider: "gcpsm",
+			wantInput: map[string]interface{}{
+				"projectID":   "gcp-project",
+				"secretNames": []string{"app-secret"},
+			},
+		},
+		{
+			name: "gcpsm load binds project secret and alias",
+			args: []string{
+				"--flush-interval=1ms",
+				"load",
+				"--override",
+				"--rawValue",
+				"--key-caser", "upper",
+				"--key-prefixer", "PREFIX_",
+				"--key-suffixer", "_SUFFIX",
+				"gsm",
+				"--project-id", "gcp-project",
+				"--secret-name", "app-secret",
+			},
+			provider: "gcpsm",
+			wantInput: map[string]interface{}{
+				"projectID":   "gcp-project",
+				"secretNames": []string{"app-secret"},
+			},
+		},
+		{
+			name: "gcpsm load binds environment fallbacks",
+			args: []string{
+				"--flush-interval=1ms",
+				"load",
+				"gcpsm",
+			},
+			environment: map[string]string{
+				"GCP_PROJECT_ID":    "environment-project",
+				"GCPSM_SECRET_NAME": "environment-secret",
+			},
+			provider: "gcpsm",
+			wantInput: map[string]interface{}{
+				"projectID":   "environment-project",
+				"secretNames": []string{"environment-secret"},
+			},
+		},
+		{
+			name: "gcpsm load binds Google Cloud project fallback",
+			args: []string{
+				"--flush-interval=1ms",
+				"load",
+				"gcpsm",
+			},
+			environment: map[string]string{
+				"GCPSM_SECRET_NAME":    "environment-secret",
+				"GOOGLE_CLOUD_PROJECT": "google-environment-project",
+			},
+			provider: "gcpsm",
+			wantInput: map[string]interface{}{
+				"projectID":   "google-environment-project",
+				"secretNames": []string{"environment-secret"},
 			},
 		},
 		{
@@ -692,6 +761,16 @@ func TestCLIProviderValidationWithoutExternalServices(t *testing.T) {
 			wantOutput: "if --secret-key is specified",
 		},
 		{
+			name:       "bad path gcpsm load requires project",
+			args:       []string{"load", "gcpsm", "--secret-name", "secret"},
+			wantOutput: "--project-id is required",
+		},
+		{
+			name:       "bad path gcpsm load requires secret",
+			args:       []string{"load", "gcpsm", "--project-id", "project"},
+			wantOutput: "--secret-name is required",
+		},
+		{
 			name: "bad path awsssm load rejects profile with access key",
 			args: []string{
 				"load", "awsssm",
@@ -768,6 +847,24 @@ func TestCLIProviderValidationWithoutExternalServices(t *testing.T) {
 				"--access-key", "access",
 			},
 			wantOutput: "if --access-key is specified",
+		},
+		{
+			name: "bad path gcpsm write requires project",
+			args: []string{
+				"write", "--source", sourceFile,
+				"gcpsm",
+				"--secret-name", "secret",
+			},
+			wantOutput: "--project-id is required",
+		},
+		{
+			name: "bad path gcpsm write requires secret",
+			args: []string{
+				"write", "--source", sourceFile,
+				"gcpsm",
+				"--project-id", "project",
+			},
+			wantOutput: "--secret-name is required",
 		},
 		{
 			name: "bad path awsssm write rejects profile with access key",
@@ -1114,6 +1211,9 @@ func runCLIHelper(
 		"DOPPLER_PROJECT":               "",
 		"DOPPLER_TOKEN":                 "",
 		"GITHUB_TOKEN":                  "",
+		"GCP_PROJECT_ID":                "",
+		"GCPSM_SECRET_NAME":             "",
+		"GOOGLE_CLOUD_PROJECT":          "",
 		"VAULT_ADDR":                    "",
 		"VAULT_APP_ROLE":                "",
 		"VAULT_APP_ROLE_ID":             "",
@@ -1168,6 +1268,21 @@ func installCLIProviderFakes() {
 			"secretNames": config.SecretNames,
 			"override":    override,
 			"rawValue":    rawValue,
+		}); err != nil {
+			return nil, err
+		}
+
+		return noop.New(override, rawValue)
+	}
+
+	newGCPSMProvider = func(
+		override, rawValue bool,
+		config *gcpsm.Config,
+		secretInformation *gcpsm.SecretInformation,
+	) (provider.IProvider, error) {
+		if err := validateFakeProviderInput("gcpsm", map[string]interface{}{
+			"projectID":   config.ProjectID,
+			"secretNames": secretInformation.SecretNames,
 		}); err != nil {
 			return nil, err
 		}
