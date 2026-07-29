@@ -16,6 +16,8 @@ import (
 // Name of the parser.
 const Name = "yaml"
 
+var newBaseParser = parser.New
+
 // YAML parser.
 type YAML struct {
 	*parser.Parser `validate:"required"`
@@ -45,7 +47,7 @@ func New() (*YAML, error) {
 	// Enforces interface implementation.
 	var _ parser.IParser = (*YAML)(nil)
 
-	p, err := parser.New(Name)
+	p, err := newBaseParser(Name)
 	if err != nil {
 		return nil, err
 	}
