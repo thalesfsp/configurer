@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/thalesfsp/configurer/awssm"
 	"github.com/thalesfsp/configurer/awsssm"
+	"github.com/thalesfsp/configurer/doppler"
 	"github.com/thalesfsp/configurer/noop"
 	"github.com/thalesfsp/configurer/provider"
 	"github.com/thalesfsp/configurer/vault"
@@ -302,6 +303,49 @@ func TestCLIProviderSuccessPathsUseLocalFakes(t *testing.T) {
 			},
 		},
 		{
+			name: "doppler load binds flags and load options",
+			args: []string{
+				"--flush-interval=1ms",
+				"load",
+				"--override",
+				"--rawValue",
+				"doppler",
+				"--token", "dp.pt.token",
+				"--project", "project",
+				"--config", "development",
+			},
+			provider: "doppler",
+			wantInput: map[string]interface{}{
+				"config": map[string]interface{}{
+					"token":   "dp.pt.token",
+					"project": "project",
+					"config":  "development",
+				},
+				"override": true,
+				"rawValue": true,
+			},
+		},
+		{
+			name: "doppler load alias binds environment fallbacks for service token",
+			args: []string{
+				"--flush-interval=1ms",
+				"load", "dp",
+			},
+			environment: map[string]string{
+				"DOPPLER_TOKEN": "dp.st.token",
+			},
+			provider: "doppler",
+			wantInput: map[string]interface{}{
+				"config": map[string]interface{}{
+					"token":   "dp.st.token",
+					"project": "",
+					"config":  "",
+				},
+				"override": false,
+				"rawValue": false,
+			},
+		},
+		{
 			name: "awsssm load path flags transformations and dump",
 			args: []string{
 				"--flush-interval=1ms",
@@ -400,6 +444,48 @@ func TestCLIProviderSuccessPathsUseLocalFakes(t *testing.T) {
 			wantInput: map[string]interface{}{
 				"config":      fakeAWSConfig("us-east-1", "", "access", "secret-key"),
 				"secretNames": []string{"secret"},
+			},
+		},
+		{
+			name: "doppler write binds flags",
+			args: []string{
+				"write", "--source", sourceFile,
+				"doppler",
+				"--token", "dp.pt.token",
+				"--project", "project",
+				"--config", "development",
+			},
+			provider: "doppler",
+			wantInput: map[string]interface{}{
+				"config": map[string]interface{}{
+					"token":   "dp.pt.token",
+					"project": "project",
+					"config":  "development",
+				},
+				"override": false,
+				"rawValue": false,
+			},
+		},
+		{
+			name: "doppler write binds environment fallbacks",
+			args: []string{
+				"write", "--source", sourceFile,
+				"doppler",
+			},
+			environment: map[string]string{
+				"DOPPLER_TOKEN":   "dp.pt.environment",
+				"DOPPLER_PROJECT": "environment-project",
+				"DOPPLER_CONFIG":  "production",
+			},
+			provider: "doppler",
+			wantInput: map[string]interface{}{
+				"config": map[string]interface{}{
+					"token":   "dp.pt.environment",
+					"project": "environment-project",
+					"config":  "production",
+				},
+				"override": false,
+				"rawValue": false,
 			},
 		},
 		{
@@ -678,6 +764,25 @@ func TestCLIProviderValidationWithoutExternalServices(t *testing.T) {
 			wantOutput: "invalid struct",
 		},
 		{
+			name: "bad path doppler load requires project and config for regular token",
+			args: []string{
+				"load", "doppler",
+				"--token", "dp.pt.token",
+				"--project", "project",
+			},
+			wantOutput: "project and config",
+		},
+		{
+			name: "bad path doppler write requires token",
+			args: []string{
+				"write", "--source", sourceFile,
+				"doppler",
+				"--project", "project",
+				"--config", "development",
+			},
+			wantOutput: "Token",
+		},
+		{
 			name: "bad path github write requires token before network access",
 			args: []string{
 				"write", "--source", sourceFile,
@@ -846,6 +951,9 @@ func runCLIHelper(
 		"CONFIGURER_BRIDGE_KEY":         "",
 		"CONFIGURER_BRIDGE_SERVER":      "",
 		"CONFIGURER_BRIDGE_SOURCE":      "",
+		"DOPPLER_CONFIG":                "",
+		"DOPPLER_PROJECT":               "",
+		"DOPPLER_TOKEN":                 "",
 		"GITHUB_TOKEN":                  "",
 		"VAULT_ADDR":                    "",
 		"VAULT_APP_ROLE":                "",
@@ -972,6 +1080,25 @@ func installCLIProviderFakes() {
 		if err := validateFakeProviderInput("github", map[string]interface{}{
 			"owner":      owner,
 			"repository": repository,
+		}); err != nil {
+			return nil, err
+		}
+
+		return noop.New(override, rawValue)
+	}
+
+	newDopplerProvider = func(
+		override, rawValue bool,
+		config *doppler.Config,
+	) (provider.IProvider, error) {
+		if err := validateFakeProviderInput("doppler", map[string]interface{}{
+			"config": map[string]interface{}{
+				"token":   config.Token,
+				"project": config.Project,
+				"config":  config.Config,
+			},
+			"override": override,
+			"rawValue": rawValue,
 		}); err != nil {
 			return nil, err
 		}
