@@ -645,16 +645,16 @@ func CreateBridge() {
 	bridgeLogger.PrintlnWithOptions(
 		level.Info,
 		"Creating bridge",
-		sypl.WithField("destination", conf.Destination.String()),
-		sypl.WithField("server", conf.Server.String()),
-		sypl.WithField("source", conf.Source.String()),
+		sypl.WithField("destination", bridgeStartConfig.Destination.String()),
+		sypl.WithField("server", bridgeStartConfig.Server.String()),
+		sypl.WithField("source", bridgeStartConfig.Source.String()),
 	)
 
-	if conf.Insecure {
+	if bridgeStartConfig.Insecure {
 		bridgeLogger.Infoln("Ignoring machine's `known_hosts` file (`insecure` is set to `true`)")
 	}
 
-	client := core.New(conf)
+	client := core.New(bridgeStartConfig)
 
 	if err := client.Start(); err != nil {
 		bridgeLogger.Fatalln("failed to start client", err)
@@ -697,7 +697,7 @@ func ValidateConnection() {
 	maxAttempts := bridgeRetryMaxAttempts
 
 	for {
-		conn, err := net.Dial("tcp", conf.Source.String())
+		conn, err := net.Dial("tcp", bridgeStartConfig.Source.String())
 		if err == nil {
 			conn.Close()
 
@@ -709,7 +709,7 @@ func ValidateConnection() {
 		if attempts >= maxAttempts {
 			bridgeLogger.Fatallnf(
 				"Failed to connect to %s, %d attempts",
-				conf.Source.String(),
+				bridgeStartConfig.Source.String(),
 				maxAttempts,
 			)
 		}
@@ -732,7 +732,7 @@ func RunnerBridge(args []string) {
 		bridgeLogger.Infolnf("Validating connection (set `validate-connection` to `false` to disable this)")
 
 		if err := waitForBridgeReady(
-			conf.Source.String(),
+			bridgeStartConfig.Source.String(),
 			bridgePostConnectionDelay,
 			bridgeRetryDelay,
 		); err != nil {

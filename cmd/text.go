@@ -8,7 +8,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var contentFormat string
+var textContentFormat string
 
 // textCmd represents the No-Op command.
 var textCmd = &cobra.Command{
@@ -53,7 +53,7 @@ NOTE: The "-c" flag have precedence over double dash (--)
 
 		rawValue := cmd.Flag("rawValue").Value.String() == "true"
 
-		dotEnvProvider, err := LoadFromText(shouldOverride, rawValue, contentFormat, string(content))
+		dotEnvProvider, err := LoadFromText(shouldOverride, rawValue, textContentFormat, string(content))
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -65,7 +65,7 @@ NOTE: The "-c" flag have precedence over double dash (--)
 func init() {
 	loadCmd.AddCommand(textCmd)
 
-	textCmd.Flags().StringVarP(&contentFormat, "format", "f", "env", "env format")
+	textCmd.Flags().StringVarP(&textContentFormat, "format", "f", "env", "env format")
 
 	textCmd.SetUsageTemplate(providerUsageTemplate)
 }
