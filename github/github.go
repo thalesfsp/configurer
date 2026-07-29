@@ -25,6 +25,8 @@ import (
 // Name of the provider.
 const Name = "github"
 
+var githubAPIBaseURL = "https://api.github.com"
+
 // Target of the request.
 type Target string
 
@@ -113,6 +115,10 @@ func encrypt(publicKey, secret string) (string, error) {
 		return "", customerror.NewFailedToError("decode public key", customerror.WithError(err))
 	}
 
+	if len(decodedPublicKey) != 32 {
+		return "", customerror.NewInvalidError("public key must decode to 32 bytes")
+	}
+
 	// Convert the decoded public key to [32]byte.
 	var publicKeyBytes [32]byte
 
@@ -143,7 +149,7 @@ func retrieveKey(
 
 	r, err := c.Get(
 		ctx,
-		fmt.Sprintf("https://api.github.com/repos/%s/%s/%s/secrets/public-key", owner, repo, target),
+		fmt.Sprintf("%s/repos/%s/%s/%s/secrets/public-key", githubAPIBaseURL, owner, repo, target),
 		httpclient.WithRespBody(&publicKeyResponse),
 	)
 	if err != nil {
@@ -161,7 +167,7 @@ func (v *GitHub) GetRepository(ctx context.Context) (*Repository, error) {
 
 	r, err := v.client.Get(
 		ctx,
-		fmt.Sprintf("https://api.github.com/repos/%s/%s", v.Owner, v.Repo),
+		fmt.Sprintf("%s/repos/%s/%s", githubAPIBaseURL, v.Owner, v.Repo),
 		httpclient.WithRespBody(&repository),
 	)
 	if err != nil {
@@ -180,7 +186,8 @@ func List(ctx context.Context, v *GitHub) (*SecretsResponse, error) {
 	resp, err := v.client.Get(
 		ctx,
 		fmt.Sprintf(
-			"https://api.github.com/repos/%s/%s/actions/secrets",
+			"%s/repos/%s/%s/actions/secrets",
+			githubAPIBaseURL,
 			v.Owner,
 			v.Repo,
 		),
@@ -201,7 +208,8 @@ func Delete(ctx context.Context, v *GitHub, secrets ...string) error {
 		resp, err := v.client.Delete(
 			ctx,
 			fmt.Sprintf(
-				"https://api.github.com/repos/%s/%s/actions/secrets/%s",
+				"%s/repos/%s/%s/actions/secrets/%s",
+				githubAPIBaseURL,
 				v.Owner,
 				v.Repo,
 				secret,
@@ -307,7 +315,11 @@ func (v *GitHub) Write(ctx context.Context, values map[string]interface{}, opts 
 		concurrentloop.WithRandomDelayTime(100, 700, time.Millisecond),
 	)
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // publicKeyForTarget returns the public key matching the given target. It
@@ -331,7 +343,8 @@ func (v *GitHub) constructRequestDetails(
 ) (string, string, httpclient.Func) {
 	finalVerb := http.MethodPut
 	finalURL := fmt.Sprintf(
-		"https://api.github.com/repos/%s/%s/%s/secrets/%s",
+		"%s/repos/%s/%s/%s/secrets/%s",
+		githubAPIBaseURL,
 		v.Owner,
 		v.Repo,
 		options.Target,
@@ -341,7 +354,8 @@ func (v *GitHub) constructRequestDetails(
 
 	if options.Variable {
 		finalURL = fmt.Sprintf(
-			"https://api.github.com/repos/%s/%s/%s/variables",
+			"%s/repos/%s/%s/%s/variables",
+			githubAPIBaseURL,
 			v.Owner,
 			v.Repo,
 			options.Target,
@@ -353,7 +367,8 @@ func (v *GitHub) constructRequestDetails(
 
 	if repository != nil {
 		finalURL = fmt.Sprintf(
-			"https://api.github.com/repositories/%d/environments/%s/secrets/%s",
+			"%s/repositories/%d/environments/%s/secrets/%s",
+			githubAPIBaseURL,
 			repository.ID,
 			options.Environment,
 			key,
@@ -363,7 +378,8 @@ func (v *GitHub) constructRequestDetails(
 
 		if options.Variable {
 			finalURL = fmt.Sprintf(
-				"https://api.github.com/repositories/%d/environments/%s/variables",
+				"%s/repositories/%d/environments/%s/variables",
+				githubAPIBaseURL,
 				repository.ID,
 				options.Environment,
 			)
@@ -377,7 +393,8 @@ func (v *GitHub) constructRequestDetails(
 		// guard against a nil repository (no environment was set).
 		if options.Variable && repository != nil {
 			finalURL = fmt.Sprintf(
-				"https://api.github.com/repositories/%d/environments/%s/variables/%s",
+				"%s/repositories/%d/environments/%s/variables/%s",
+				githubAPIBaseURL,
 				repository.ID,
 				options.Environment,
 				key,
