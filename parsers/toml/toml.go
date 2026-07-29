@@ -16,6 +16,8 @@ import (
 // Name of the parser.
 const Name = "toml"
 
+var newBaseParser = parser.New
+
 // TOML parser.
 type TOML struct {
 	*parser.Parser `validate:"required"`
@@ -45,7 +47,7 @@ func New() (*TOML, error) {
 	// Enforces interface implementation.
 	var _ parser.IParser = (*TOML)(nil)
 
-	p, err := parser.New(Name)
+	p, err := newBaseParser(Name)
 	if err != nil {
 		return nil, err
 	}

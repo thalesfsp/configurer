@@ -16,6 +16,8 @@ import (
 // Name of the parser.
 const Name = "json"
 
+var newBaseParser = parser.New
+
 // JSON parser.
 type JSON struct {
 	*parser.Parser `validate:"required"`
@@ -45,7 +47,7 @@ func New() (*JSON, error) {
 	// Enforces interface implementation.
 	var _ parser.IParser = (*JSON)(nil)
 
-	p, err := parser.New(Name)
+	p, err := newBaseParser(Name)
 	if err != nil {
 		return nil, err
 	}
