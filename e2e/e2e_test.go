@@ -1,6 +1,7 @@
 package e2e
 
 import (
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -15,16 +16,20 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	defer os.RemoveAll(dir)
 
 	binPath = filepath.Join(dir, "configurer")
 	build := exec.Command("go", "build", "-o", binPath, ".")
 	build.Dir = mustRepoRoot()
 	if out, err := build.CombinedOutput(); err != nil {
+		os.RemoveAll(dir)
+
 		panic(string(out))
 	}
 
-	os.Exit(m.Run())
+	code := m.Run()
+
+	os.RemoveAll(dir)
+	os.Exit(code)
 }
 
 func mustRepoRoot() string {
@@ -57,9 +62,13 @@ func runStdin(t *testing.T, env []string, stdin string, args ...string) (string,
 
 	err := c.Run()
 	code := 0
-	if exitErr, ok := err.(*exec.ExitError); ok {
+
+	var exitErr *exec.ExitError
+
+	switch {
+	case errors.As(err, &exitErr):
 		code = exitErr.ExitCode()
-	} else if err != nil {
+	case err != nil:
 		t.Fatalf("run %v: %v", args, err)
 	}
 
