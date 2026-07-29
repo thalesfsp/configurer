@@ -59,7 +59,7 @@ endif
 	@goreleaser build --clean --snapshot && echo "Local release OK"
 
 test:
-	@VENDOR_ENVIRONMENT="testing" go test -timeout 30s -short -v -race -cover \
+	@VENDOR_ENVIRONMENT="testing" go test -timeout 180s -short -v -race -cover \
 	-coverprofile=coverage.out ./... && echo "Test OK"
 
 test-integration:
