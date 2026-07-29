@@ -10,6 +10,15 @@ import (
 	"github.com/thalesfsp/sypl/v2/level"
 )
 
+// Intentionally shared parent and persistent flag state:
+//
+//   - rootCmd: logOutputs, logSettings, execMode, sequentialDelay, flushInterval
+//   - loadCmd: commands, dumpFilename, keyCaserOptions, keyPrefixerOptions,
+//     keySuffixerOptions, shutdownTimeout
+//   - writeCmd: sourceFilename
+//
+// These variables are read by multiple child commands and must remain shared
+// with the parent command that owns their persistent flags.
 var (
 	cliLogger = sypl.NewDefault("cli", level.Info)
 

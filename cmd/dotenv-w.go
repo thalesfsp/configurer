@@ -11,7 +11,7 @@ import (
 	"github.com/thalesfsp/configurer/util"
 )
 
-var targetFilename string
+var dotenvWriteTarget string
 
 // dotEnvWCmd represents the env command.
 var dotEnvWCmd = &cobra.Command{
@@ -35,7 +35,7 @@ var dotEnvWCmd = &cobra.Command{
 			log.Fatalln(err)
 		}
 
-		dotEnvProvider, err := dotenv.New(false, false, targetFilename)
+		dotEnvProvider, err := dotenv.New(false, false, dotenvWriteTarget)
 		if err != nil {
 			log.Fatalln(err)
 		}
@@ -51,7 +51,7 @@ var dotEnvWCmd = &cobra.Command{
 func init() {
 	writeCmd.AddCommand(dotEnvWCmd)
 
-	dotEnvWCmd.Flags().StringVarP(&targetFilename, "target", "t", ".env", "The dot env file to write")
+	dotEnvWCmd.Flags().StringVarP(&dotenvWriteTarget, "target", "t", ".env", "The dot env file to write")
 
 	dotEnvWCmd.MarkFlagRequired("target")
 

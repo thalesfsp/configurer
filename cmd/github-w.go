@@ -14,10 +14,12 @@ import (
 )
 
 var (
-	environment, owner, repo string
-	httpVerb                 string
-	target                   string
-	variable                 bool
+	githubWriteEnvironment string
+	githubWriteHTTPVerb    string
+	githubWriteOwner       string
+	githubWriteRepo        string
+	githubWriteTarget      string
+	githubWriteVariable    bool
 )
 
 var newGitHubProvider = func(
@@ -58,27 +60,27 @@ to read your public key.
 			log.Fatalln(err)
 		}
 
-		p, err := newGitHubProvider(false, false, owner, repo)
+		p, err := newGitHubProvider(false, false, githubWriteOwner, githubWriteRepo)
 		if err != nil {
 			log.Fatalln(err)
 		}
 
 		var opts []option.WriteFunc
 
-		if environment != "" {
-			opts = append(opts, option.WithEnvironment(environment))
+		if githubWriteEnvironment != "" {
+			opts = append(opts, option.WithEnvironment(githubWriteEnvironment))
 		}
 
-		if variable {
-			opts = append(opts, option.WithVariable(variable))
+		if githubWriteVariable {
+			opts = append(opts, option.WithVariable(githubWriteVariable))
 		}
 
-		if target != "" {
-			opts = append(opts, option.WithTarget(target))
+		if githubWriteTarget != "" {
+			opts = append(opts, option.WithTarget(githubWriteTarget))
 		}
 
-		if httpVerb != "" {
-			opts = append(opts, option.WithHTTPVerb(httpVerb))
+		if githubWriteHTTPVerb != "" {
+			opts = append(opts, option.WithHTTPVerb(githubWriteHTTPVerb))
 		}
 
 		if err := p.Write(ctx, parsedFile, opts...); err != nil {
@@ -92,12 +94,12 @@ to read your public key.
 func init() {
 	writeCmd.AddCommand(githubWCmd)
 
-	githubWCmd.Flags().StringVarP(&owner, "owner", "o", "", "owner of the repository")
-	githubWCmd.Flags().StringVarP(&repo, "repo", "p", "", "repository name")
-	githubWCmd.Flags().StringVar(&environment, "environment", "", "environment to write secrets")
-	githubWCmd.Flags().BoolVar(&variable, "variable", false, "variable to write secrets")
-	githubWCmd.Flags().StringVar(&target, "target", github.Actions.String(), "target to write secrets, e.g.: codespaces, actions")
-	githubWCmd.Flags().StringVar(&httpVerb, "httpVerb", "", "HTTP verb to be used")
+	githubWCmd.Flags().StringVarP(&githubWriteOwner, "owner", "o", "", "owner of the repository")
+	githubWCmd.Flags().StringVarP(&githubWriteRepo, "repo", "p", "", "repository name")
+	githubWCmd.Flags().StringVar(&githubWriteEnvironment, "environment", "", "environment to write secrets")
+	githubWCmd.Flags().BoolVar(&githubWriteVariable, "variable", false, "variable to write secrets")
+	githubWCmd.Flags().StringVar(&githubWriteTarget, "target", github.Actions.String(), "target to write secrets, e.g.: codespaces, actions")
+	githubWCmd.Flags().StringVar(&githubWriteHTTPVerb, "httpVerb", "", "HTTP verb to be used")
 
 	githubWCmd.MarkFlagRequired("owner")
 	githubWCmd.MarkFlagRequired("repo")

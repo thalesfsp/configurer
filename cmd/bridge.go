@@ -4,24 +4,9 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
-	"github.com/thalesfsp/mole/core"
 )
 
-var (
-	bridgeLogger = cliLogger.New("bridge")
-
-	bridgePostConnectionDelay time.Duration
-	bridgeRetryDelay          time.Duration
-	bridgeRetryMaxAttempts    int
-	bridgeValidateConnection  bool
-
-	bridgeDestination string
-	bridgeKeyValue    string
-	bridgeServer      string
-	bridgeSource      string
-
-	conf = &core.Configuration{}
-)
+var bridgeLogger = cliLogger.New("bridge")
 
 // bridgeCmd represents the run command.
 var bridgeCmd = &cobra.Command{
@@ -34,7 +19,7 @@ func init() {
 	rootCmd.AddCommand(bridgeCmd)
 
 	// Required.
-	bridgeCmd.PersistentFlags().StringVar(&conf.Key, "key", "", "set server authentication key file path. Required if --key-value is not set")
+	bridgeCmd.PersistentFlags().StringVar(&bridgeStartConfig.Key, "key", "", "set server authentication key file path. Required if --key-value is not set")
 	bridgeCmd.PersistentFlags().StringVar(&bridgeKeyValue, "key-value", "", "set server authentication key. Required if --key is not set.")
 	bridgeCmd.PersistentFlags().StringVarP(&bridgeDestination, "destination", "d", "", "set destination endpoint address.")
 	bridgeCmd.PersistentFlags().StringVarP(&bridgeServer, "server", "s", "", "set server address: [<user>@]<host>[:<port>]")
@@ -47,17 +32,17 @@ func init() {
 	bridgeCmd.PersistentFlags().IntVar(&bridgeRetryMaxAttempts, "retry-max-attempts", 3, "maximum number of connection retries")
 
 	// Fine-tuning.
-	bridgeCmd.PersistentFlags().BoolVarP(&conf.Detach, "detach", "x", false, "run process in background")
-	bridgeCmd.PersistentFlags().BoolVarP(&conf.Insecure, "insecure", "i", false, "skip host key validation when connecting to ssh server")
-	bridgeCmd.PersistentFlags().BoolVarP(&conf.Rpc, "rpc", "", false, "enable the rpc server")
-	bridgeCmd.PersistentFlags().BoolVarP(&conf.Verbose, "verbose", "v", false, "increase log verbosity")
-	bridgeCmd.PersistentFlags().DurationVarP(&conf.KeepAliveInterval, "keep-alive-interval", "K", 10*time.Second, "time interval for keep alive packets to be sent")
-	bridgeCmd.PersistentFlags().DurationVarP(&conf.Timeout, "timeout", "t", 3*time.Second, "ssh server connection timeout")
-	bridgeCmd.PersistentFlags().DurationVarP(&conf.WaitAndRetry, "retry-wait", "w", 3*time.Second, "time to wait before trying to reconnect to ssh server")
-	bridgeCmd.PersistentFlags().IntVarP(&conf.ConnectionRetries, "connection-retries", "R", 3, `maximum number of connection retries to the ssh server provide 0 to never give up or a negative number to disable`)
-	bridgeCmd.PersistentFlags().StringVarP(&conf.RpcAddress, "rpc-address", "", "127.0.0.1:0", `set the network address of the rpc server. The default value uses a random free port to listen for requests. The full address is kept on $HOME/.mole/<id>.`)
-	bridgeCmd.PersistentFlags().StringVarP(&conf.SshAgent, "ssh-agent", "A", "", "unix socket to communicate with a ssh agent")
-	bridgeCmd.PersistentFlags().StringVarP(&conf.SshConfig, "config", "c", "$HOME/.ssh/config", "set config file path")
+	bridgeCmd.PersistentFlags().BoolVarP(&bridgeStartConfig.Detach, "detach", "x", false, "run process in background")
+	bridgeCmd.PersistentFlags().BoolVarP(&bridgeStartConfig.Insecure, "insecure", "i", false, "skip host key validation when connecting to ssh server")
+	bridgeCmd.PersistentFlags().BoolVarP(&bridgeStartConfig.Rpc, "rpc", "", false, "enable the rpc server")
+	bridgeCmd.PersistentFlags().BoolVarP(&bridgeStartConfig.Verbose, "verbose", "v", false, "increase log verbosity")
+	bridgeCmd.PersistentFlags().DurationVarP(&bridgeStartConfig.KeepAliveInterval, "keep-alive-interval", "K", 10*time.Second, "time interval for keep alive packets to be sent")
+	bridgeCmd.PersistentFlags().DurationVarP(&bridgeStartConfig.Timeout, "timeout", "t", 3*time.Second, "ssh server connection timeout")
+	bridgeCmd.PersistentFlags().DurationVarP(&bridgeStartConfig.WaitAndRetry, "retry-wait", "w", 3*time.Second, "time to wait before trying to reconnect to ssh server")
+	bridgeCmd.PersistentFlags().IntVarP(&bridgeStartConfig.ConnectionRetries, "connection-retries", "R", 3, `maximum number of connection retries to the ssh server provide 0 to never give up or a negative number to disable`)
+	bridgeCmd.PersistentFlags().StringVarP(&bridgeStartConfig.RpcAddress, "rpc-address", "", "127.0.0.1:0", `set the network address of the rpc server. The default value uses a random free port to listen for requests. The full address is kept on $HOME/.mole/<id>.`)
+	bridgeCmd.PersistentFlags().StringVarP(&bridgeStartConfig.SshAgent, "ssh-agent", "A", "", "unix socket to communicate with a ssh agent")
+	bridgeCmd.PersistentFlags().StringVarP(&bridgeStartConfig.SshConfig, "config", "c", "$HOME/.ssh/config", "set config file path")
 
 	bridgeCmd.SetUsageTemplate(`Usage:{{if .Runnable}}
 	{{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}

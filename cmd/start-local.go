@@ -4,8 +4,24 @@ import (
 	"log"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/thalesfsp/mole/core"
+)
+
+var (
+	bridgePostConnectionDelay time.Duration
+	bridgeRetryDelay          time.Duration
+	bridgeRetryMaxAttempts    int
+	bridgeValidateConnection  bool
+
+	bridgeDestination string
+	bridgeKeyValue    string
+	bridgeServer      string
+	bridgeSource      string
+
+	bridgeStartConfig = &core.Configuration{}
 )
 
 // startCmd represents the run command.
@@ -24,7 +40,7 @@ var startCmd = &cobra.Command{
 		}
 
 		if bridgeDestination != "" {
-			conf.Destination.Set(bridgeDestination)
+			bridgeStartConfig.Destination.Set(bridgeDestination)
 		}
 
 		if bridgeServer == "" && cBSe != "" {
@@ -32,7 +48,7 @@ var startCmd = &cobra.Command{
 		}
 
 		if bridgeServer != "" {
-			conf.Server.Set(bridgeServer)
+			bridgeStartConfig.Server.Set(bridgeServer)
 		}
 
 		if bridgeSource == "" && cBSo != "" {
@@ -40,43 +56,43 @@ var startCmd = &cobra.Command{
 		}
 
 		if bridgeSource != "" {
-			conf.Source.Set(bridgeSource)
+			bridgeStartConfig.Source.Set(bridgeSource)
 		}
 
-		if conf.Destination.String() == "" {
+		if bridgeStartConfig.Destination.String() == "" {
 			log.Fatalln("error: missing required flag --destination")
 		}
 
-		if conf.Server.String() == "" {
+		if bridgeStartConfig.Server.String() == "" {
 			log.Fatalln("error: missing required flag --server")
 		}
 
-		if conf.Source.String() == "" {
+		if bridgeStartConfig.Source.String() == "" {
 			log.Fatalln("error: missing required flag --source")
 		}
 
 		if bridgeKeyValue != "" {
-			conf.KeyValue = bridgeKeyValue
+			bridgeStartConfig.KeyValue = bridgeKeyValue
 		} else if cBK != "" {
-			conf.KeyValue = cBK
+			bridgeStartConfig.KeyValue = cBK
 		}
 
 		// Check if key or key-value is set, they are mutually exclusive.
-		if conf.KeyValue == "" && conf.Key == "" {
+		if bridgeStartConfig.KeyValue == "" && bridgeStartConfig.Key == "" {
 			log.Fatalln("error: missing required flag --key or --key-value")
 		}
 
 		// Check if key and key-value are set, they are mutually exclusive.
-		if conf.KeyValue != "" && conf.Key != "" {
+		if bridgeStartConfig.KeyValue != "" && bridgeStartConfig.Key != "" {
 			log.Fatalln("error: or --key or --key-value")
 		}
 
-		conf.TunnelType = "local"
+		bridgeStartConfig.TunnelType = "local"
 
 		// Parse key-value if it contains \n.
-		if conf.KeyValue != "" {
-			if strings.Contains(conf.KeyValue, "\\n") {
-				conf.KeyValue = strings.ReplaceAll(conf.KeyValue, "\\n", "\n")
+		if bridgeStartConfig.KeyValue != "" {
+			if strings.Contains(bridgeStartConfig.KeyValue, "\\n") {
+				bridgeStartConfig.KeyValue = strings.ReplaceAll(bridgeStartConfig.KeyValue, "\\n", "\n")
 			}
 		}
 
