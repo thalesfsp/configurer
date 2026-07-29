@@ -637,6 +637,33 @@ func CreateBridge() {
 	}
 }
 
+func waitForBridgeReady(address string, timeout, interval time.Duration) error {
+	deadline := time.Now().Add(timeout)
+
+	for {
+		remaining := time.Until(deadline)
+		if remaining <= 0 {
+			return customerror.NewFailedToError(
+				"connect to bridge before timeout",
+				customerror.WithField("address", address),
+				customerror.WithField("timeout", timeout),
+			)
+		}
+
+		conn, err := net.DialTimeout("tcp", address, remaining)
+		if err == nil {
+			conn.Close()
+
+			return nil
+		}
+
+		wait := min(interval, time.Until(deadline))
+		if wait > 0 {
+			time.Sleep(wait)
+		}
+	}
+}
+
 // ValidateConnection validates the connection.
 func ValidateConnection() {
 	bridgeLogger.Infolnf("Validating connection (set `validate-connection` to `false` to disable this)")
@@ -671,15 +698,29 @@ func ValidateConnection() {
 
 // RunnerBridge runs the bridge and command.
 func RunnerBridge(args []string) {
+	waitUntilReady := func() {
+		if !bridgeValidateConnection {
+			time.Sleep(bridgeRetryDelay)
+
+			return
+		}
+
+		bridgeLogger.Infolnf("Validating connection (set `validate-connection` to `false` to disable this)")
+
+		if err := waitForBridgeReady(
+			conf.Source.String(),
+			bridgePostConnectionDelay,
+			bridgeRetryDelay,
+		); err != nil {
+			bridgeLogger.Fatalln("Failed to validate connection", err)
+		}
+
+		bridgeLogger.Infoln("Connection validated, you're good to go!")
+	}
+
 	// If no args are provided, just create the bridge.
 	if len(args) == 0 {
-		go func() {
-			time.Sleep(bridgePostConnectionDelay)
-
-			if bridgeValidateConnection {
-				ValidateConnection()
-			}
-		}()
+		go waitUntilReady()
 
 		CreateBridge()
 
@@ -691,11 +732,7 @@ func RunnerBridge(args []string) {
 		CreateBridge()
 	}()
 
-	time.Sleep(bridgePostConnectionDelay)
-
-	if bridgeValidateConnection {
-		ValidateConnection()
-	}
+	waitUntilReady()
 
 	command, arguments := splitCmdFromArgs(args)
 
