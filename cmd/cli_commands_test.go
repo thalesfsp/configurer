@@ -1,0 +1,1043 @@
+//go:build unix
+
+package cmd
+
+import (
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"reflect"
+	"strings"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/thalesfsp/configurer/awssm"
+	"github.com/thalesfsp/configurer/awsssm"
+	"github.com/thalesfsp/configurer/noop"
+	"github.com/thalesfsp/configurer/provider"
+	"github.com/thalesfsp/configurer/vault"
+)
+
+const (
+	cliExecuteHelperEnv      = "CONFIGURER_CLI_EXECUTE_HELPER"
+	cliFakeExpectedInputEnv  = "CONFIGURER_CLI_FAKE_EXPECTED_INPUT"
+	cliFakeProvidersEnv      = "CONFIGURER_CLI_FAKE_PROVIDERS"
+	cliFakeExpectedRegionEnv = "CONFIGURER_CLI_FAKE_EXPECTED_REGION"
+	cliStdinEnv              = "CONFIGURER_CLI_TEST_STDIN"
+	cliUseWrapperEnv         = "CONFIGURER_CLI_USE_EXECUTE_WRAPPER"
+)
+
+//////
+// Cobra execution with local providers.
+//////
+
+func TestCLIFlagBindingAndLocalProviders(t *testing.T) {
+	tests := []struct {
+		name         string
+		setup        func(*testing.T) ([]string, map[string]string, func(*testing.T, string))
+		wantExitCode int
+		wantOutput   string
+	}{
+		{
+			name: "happy path load dotenv binds transformations dump and child args",
+			setup: func(t *testing.T) ([]string, map[string]string, func(*testing.T, string)) {
+				t.Helper()
+
+				envFile := filepath.Join(t.TempDir(), "fixture.env")
+				dumpFile := filepath.Join(t.TempDir(), "loaded.json")
+				require.NoError(t, os.WriteFile(
+					envFile,
+					[]byte("loaded_value=from-dotenv\n"),
+					0o600,
+				))
+
+				args := []string{
+					"--flush-interval=1ms",
+					"load",
+					"--override",
+					"--dump", dumpFile,
+					"--key-caser", "upper",
+					"--key-prefixer", "PREFIX_",
+					"--key-suffixer", "_SUFFIX",
+					"dotenv",
+					"--files", envFile,
+					"--",
+					"/bin/sh",
+					"-c",
+					`printf "%s" "$PREFIX_LOADED_VALUE_SUFFIX"`,
+				}
+
+				verify := func(t *testing.T, _ string) {
+					t.Helper()
+
+					dump, err := os.ReadFile(dumpFile)
+					require.NoError(t, err)
+					assert.JSONEq(
+						t,
+						`{"PREFIX_LOADED_VALUE_SUFFIX":"from-dotenv"}`,
+						string(dump),
+					)
+				}
+
+				return args, nil, verify
+			},
+			wantOutput: "from-dotenv",
+		},
+		{
+			name: "happy path load noop binds prefix and forwards environment",
+			setup: func(t *testing.T) ([]string, map[string]string, func(*testing.T, string)) {
+				t.Helper()
+
+				dumpFile := filepath.Join(t.TempDir(), "noop.json")
+				args := []string{
+					"--flush-interval=1ms",
+					"load",
+					"--dump", dumpFile,
+					"--key-caser", "upper",
+					"--key-prefixer", "COPIED_",
+					"--key-suffixer", "_SUFFIX",
+					"noop",
+					"--",
+					"/bin/sh",
+					"-c",
+					`printf "%s" "$COPIED_CONFIGURER_NOOP_INPUT_SUFFIX"`,
+				}
+
+				return args, map[string]string{
+					"CONFIGURER_NOOP_INPUT": "from-noop",
+				}, nil
+			},
+			wantOutput: "from-noop",
+		},
+		{
+			name: "happy path load text binds format and stdin",
+			setup: func(t *testing.T) ([]string, map[string]string, func(*testing.T, string)) {
+				t.Helper()
+
+				args := []string{
+					"--flush-interval=1ms",
+					"load",
+					"--override",
+					"text",
+					"--format", "env",
+					"--",
+					"/bin/sh",
+					"-c",
+					`printf "%s" "$CONFIGURER_TEXT_CLI"`,
+				}
+
+				return args, map[string]string{
+					cliStdinEnv: "CONFIGURER_TEXT_CLI=from-text\n",
+				}, nil
+			},
+			wantOutput: "from-text",
+		},
+		{
+			name: "bad path load text rejects unsupported format",
+			setup: func(t *testing.T) ([]string, map[string]string, func(*testing.T, string)) {
+				t.Helper()
+
+				return []string{
+						"--flush-interval=1ms",
+						"load",
+						"text",
+						"--format", "xml",
+					}, map[string]string{
+						cliStdinEnv: "<value />",
+					}, nil
+			},
+			wantExitCode: 1,
+			wantOutput:   "invalid format",
+		},
+		{
+			name: "bad path load dotenv missing fixture",
+			setup: func(t *testing.T) ([]string, map[string]string, func(*testing.T, string)) {
+				t.Helper()
+
+				return []string{
+					"--flush-interval=1ms",
+					"load",
+					"dotenv",
+					"--files", filepath.Join(t.TempDir(), "missing.env"),
+				}, nil, nil
+			},
+			wantExitCode: 1,
+			wantOutput:   "read path",
+		},
+		{
+			name: "happy path write dotenv binds source and target",
+			setup: func(t *testing.T) ([]string, map[string]string, func(*testing.T, string)) {
+				t.Helper()
+
+				sourceFile := filepath.Join(t.TempDir(), "source.env")
+				targetFile := filepath.Join(t.TempDir(), "target.env")
+				require.NoError(t, os.WriteFile(
+					sourceFile,
+					[]byte("WRITE_KEY=write-value\n"),
+					0o600,
+				))
+
+				args := []string{
+					"write",
+					"--source", sourceFile,
+					"dotenv",
+					"--target", targetFile,
+				}
+
+				verify := func(t *testing.T, _ string) {
+					t.Helper()
+
+					written, err := os.ReadFile(targetFile)
+					require.NoError(t, err)
+					assert.Contains(t, string(written), `WRITE_KEY="write-value"`)
+				}
+
+				return args, nil, verify
+			},
+		},
+		{
+			name: "bad path write dotenv missing source",
+			setup: func(t *testing.T) ([]string, map[string]string, func(*testing.T, string)) {
+				t.Helper()
+
+				return []string{
+					"write",
+					"--source", filepath.Join(t.TempDir(), "missing.env"),
+					"dotenv",
+					"--target", filepath.Join(t.TempDir(), "target.env"),
+				}, nil, nil
+			},
+			wantExitCode: 1,
+			wantOutput:   "no such file or directory",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			args, environment, verify := tt.setup(t)
+			output, err := runCLIHelper(t, t.TempDir(), environment, false, args...)
+
+			assertProcessExitCode(t, tt.wantExitCode, err, output)
+			assert.Contains(t, output, tt.wantOutput)
+
+			if verify != nil {
+				verify(t, output)
+			}
+		})
+	}
+}
+
+//////
+// Safe validation paths for remote-backed commands.
+//////
+
+func TestCLIProviderSuccessPathsUseLocalFakes(t *testing.T) {
+	sourceFile := filepath.Join(t.TempDir(), "source.env")
+	require.NoError(t, os.WriteFile(sourceFile, []byte("KEY=value\n"), 0o600))
+
+	tests := []struct {
+		name        string
+		args        []string
+		environment map[string]string
+		provider    string
+		wantInput   map[string]interface{}
+	}{
+		{
+			name: "awssm load region-only configuration",
+			args: []string{
+				"--flush-interval=1ms",
+				"load", "awssm",
+				"--region", "us-west-2",
+				"--secret-name", "secret",
+			},
+			environment: map[string]string{
+				cliFakeExpectedRegionEnv: "us-west-2",
+			},
+			provider: "awssm",
+			wantInput: map[string]interface{}{
+				"config":      fakeAWSConfig("us-west-2", "", "", ""),
+				"secretNames": []string{"secret"},
+			},
+		},
+		{
+			name: "awssm load profile transformations and dump",
+			args: []string{
+				"--flush-interval=1ms",
+				"load",
+				"--override",
+				"--rawValue",
+				"--dump", filepath.Join(t.TempDir(), "awssm.json"),
+				"--key-caser", "upper",
+				"--key-prefixer", "PREFIX_",
+				"--key-suffixer", "_SUFFIX",
+				"awssm",
+				"--region", "us-east-1",
+				"--profile", "profile",
+				"--secret-name", "secret",
+			},
+			provider: "awssm",
+			wantInput: map[string]interface{}{
+				"config":      fakeAWSConfig("us-east-1", "profile", "", ""),
+				"secretNames": []string{"secret"},
+			},
+		},
+		{
+			name: "awssm load access-key configuration",
+			args: []string{
+				"--flush-interval=1ms",
+				"load", "awssm",
+				"--region", "us-east-1",
+				"--access-key", "access",
+				"--secret-key", "secret-key",
+				"--secret-name", "secret",
+			},
+			provider: "awssm",
+			wantInput: map[string]interface{}{
+				"config":      fakeAWSConfig("us-east-1", "", "access", "secret-key"),
+				"secretNames": []string{"secret"},
+			},
+		},
+		{
+			name: "awsssm load path flags transformations and dump",
+			args: []string{
+				"--flush-interval=1ms",
+				"load",
+				"--override",
+				"--rawValue",
+				"--dump", filepath.Join(t.TempDir(), "awsssm.yaml"),
+				"--key-caser", "lower",
+				"--key-prefixer", "prefix_",
+				"--key-suffixer", "_suffix",
+				"awsssm",
+				"--region", "us-east-1",
+				"--profile", "profile",
+				"--path", "/app",
+				"--recursive=false",
+				"--no-decrypt",
+			},
+			provider: "awsssm",
+			wantInput: map[string]interface{}{
+				"config":         fakeAWSConfig("us-east-1", "profile", "", ""),
+				"parameterNames": nil,
+				"path":           "/app",
+				"recursive":      false,
+				"withDecryption": false,
+			},
+		},
+		{
+			name: "awsssm load parameter-name access-key configuration",
+			args: []string{
+				"--flush-interval=1ms",
+				"load", "awsssm",
+				"--region", "us-east-1",
+				"--access-key", "access",
+				"--secret-key", "secret-key",
+				"--parameter-name", "/app/key",
+			},
+			provider: "awsssm",
+			wantInput: map[string]interface{}{
+				"config":         fakeAWSConfig("us-east-1", "", "access", "secret-key"),
+				"parameterNames": []string{"/app/key"},
+				"path":           "",
+				"recursive":      true,
+				"withDecryption": true,
+			},
+		},
+		{
+			name: "vault load token flags transformations and dump",
+			args: []string{
+				"--flush-interval=1ms",
+				"load",
+				"--override",
+				"--rawValue",
+				"--dump", filepath.Join(t.TempDir(), "vault.yml"),
+				"--key-caser", "upper",
+				"--key-prefixer", "PREFIX_",
+				"--key-suffixer", "_SUFFIX",
+				"vault",
+				"--address", "https://vault.example.test",
+				"--namespace", "namespace",
+				"--mount-path", "secret",
+				"--secret-path", "app/config",
+				"--token", "token",
+				"--app-role", "role",
+				"--role-id", "role-id",
+				"--secret-id", "secret-id",
+			},
+			provider:  "vault",
+			wantInput: fakeVaultInput(),
+		},
+		{
+			name: "awssm write profile configuration",
+			args: []string{
+				"write", "--source", sourceFile,
+				"awssm",
+				"--region", "us-east-1",
+				"--profile", "profile",
+				"--secret-name", "secret",
+			},
+			provider: "awssm",
+			wantInput: map[string]interface{}{
+				"config":      fakeAWSConfig("us-east-1", "profile", "", ""),
+				"secretNames": []string{"secret"},
+			},
+		},
+		{
+			name: "awssm write access-key configuration",
+			args: []string{
+				"write", "--source", sourceFile,
+				"awssm",
+				"--region", "us-east-1",
+				"--access-key", "access",
+				"--secret-key", "secret-key",
+				"--secret-name", "secret",
+			},
+			provider: "awssm",
+			wantInput: map[string]interface{}{
+				"config":      fakeAWSConfig("us-east-1", "", "access", "secret-key"),
+				"secretNames": []string{"secret"},
+			},
+		},
+		{
+			name: "awsssm write profile configuration",
+			args: []string{
+				"write", "--source", sourceFile,
+				"awsssm",
+				"--region", "us-east-1",
+				"--profile", "profile",
+				"--path", "/app",
+			},
+			provider: "awsssm",
+			wantInput: map[string]interface{}{
+				"config":         fakeAWSConfig("us-east-1", "profile", "", ""),
+				"parameterNames": nil,
+				"path":           "/app",
+				"recursive":      false,
+				"withDecryption": true,
+			},
+		},
+		{
+			name: "awsssm write access-key configuration",
+			args: []string{
+				"write", "--source", sourceFile,
+				"awsssm",
+				"--region", "us-east-1",
+				"--access-key", "access",
+				"--secret-key", "secret-key",
+				"--path", "/app",
+			},
+			provider: "awsssm",
+			wantInput: map[string]interface{}{
+				"config":         fakeAWSConfig("us-east-1", "", "access", "secret-key"),
+				"parameterNames": nil,
+				"path":           "/app",
+				"recursive":      false,
+				"withDecryption": true,
+			},
+		},
+		{
+			name: "vault write binds authentication and secret flags",
+			args: []string{
+				"write", "--source", sourceFile,
+				"vault",
+				"--address", "https://vault.example.test",
+				"--namespace", "namespace",
+				"--mount-path", "secret",
+				"--secret-path", "app/config",
+				"--token", "token",
+				"--app-role", "role",
+				"--role-id", "role-id",
+				"--secret-id", "secret-id",
+			},
+			provider:  "vault",
+			wantInput: fakeVaultInput(),
+		},
+		{
+			name: "github write binds all local write options",
+			args: []string{
+				"write", "--source", sourceFile,
+				"github",
+				"--owner", "owner",
+				"--repo", "repo",
+				"--environment", "production",
+				"--variable",
+				"--target", "actions",
+				"--httpVerb", "PUT",
+			},
+			provider: "github",
+			wantInput: map[string]interface{}{
+				"owner":      "owner",
+				"repository": "repo",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			environment := map[string]string{
+				cliFakeProvidersEnv: "1",
+				cliFakeExpectedInputEnv: fakeProviderInput(
+					tt.provider,
+					tt.wantInput,
+				),
+			}
+			for key, value := range tt.environment {
+				environment[key] = value
+			}
+
+			output, err := runCLIHelper(t, t.TempDir(), environment, false, tt.args...)
+
+			assertProcessExitCode(t, 0, err, output)
+		})
+	}
+}
+
+func TestCLIProviderValidationWithoutExternalServices(t *testing.T) {
+	sourceFile := filepath.Join(t.TempDir(), "source.env")
+	require.NoError(t, os.WriteFile(sourceFile, []byte("KEY=value\n"), 0o600))
+
+	tests := []struct {
+		name       string
+		args       []string
+		wantOutput string
+	}{
+		{
+			name: "bad path awssm load rejects profile with access key",
+			args: []string{
+				"load", "awssm",
+				"--secret-name", "secret",
+				"--profile", "profile",
+				"--access-key", "access",
+			},
+			wantOutput: "if --profile is specified",
+		},
+		{
+			name: "bad path awssm load requires region without profile",
+			args: []string{
+				"load", "awssm",
+				"--secret-name", "secret",
+			},
+			wantOutput: "if --profile is not specified",
+		},
+		{
+			name: "bad path awssm load rejects secret key without access key",
+			args: []string{
+				"load", "awssm",
+				"--secret-name", "secret",
+				"--region", "us-east-1",
+				"--secret-key", "secret-key",
+			},
+			wantOutput: "if --secret-key is specified",
+		},
+		{
+			name: "bad path awsssm load rejects profile with access key",
+			args: []string{
+				"load", "awsssm",
+				"--path", "/app",
+				"--profile", "profile",
+				"--access-key", "access",
+			},
+			wantOutput: "if --profile is specified",
+		},
+		{
+			name: "bad path awsssm load requires region without profile",
+			args: []string{
+				"load", "awsssm",
+				"--path", "/app",
+			},
+			wantOutput: "if --profile is not specified",
+		},
+		{
+			name: "bad path awsssm load rejects secret key without access key",
+			args: []string{
+				"load", "awsssm",
+				"--path", "/app",
+				"--region", "us-east-1",
+				"--secret-key", "secret-key",
+			},
+			wantOutput: "if --secret-key is specified",
+		},
+		{
+			name: "bad path awsssm load requires path or parameter name",
+			args: []string{
+				"load", "awsssm",
+				"--region", "us-east-1",
+			},
+			wantOutput: "either --path or --parameter-name",
+		},
+		{
+			name: "bad path awssm write rejects profile with access key",
+			args: []string{
+				"write", "--source", sourceFile,
+				"awssm",
+				"--secret-name", "secret",
+				"--profile", "profile",
+				"--access-key", "access",
+			},
+			wantOutput: "if --profile is specified",
+		},
+		{
+			name: "bad path awssm write requires region without profile",
+			args: []string{
+				"write", "--source", sourceFile,
+				"awssm",
+				"--secret-name", "secret",
+			},
+			wantOutput: "if --profile is not specified",
+		},
+		{
+			name: "bad path awssm write rejects secret key without access key",
+			args: []string{
+				"write", "--source", sourceFile,
+				"awssm",
+				"--secret-name", "secret",
+				"--region", "us-east-1",
+				"--secret-key", "secret-key",
+			},
+			wantOutput: "if --secret-key is specified",
+		},
+		{
+			name: "bad path awssm write rejects access key without secret key",
+			args: []string{
+				"write", "--source", sourceFile,
+				"awssm",
+				"--secret-name", "secret",
+				"--region", "us-east-1",
+				"--access-key", "access",
+			},
+			wantOutput: "if --access-key is specified",
+		},
+		{
+			name: "bad path awsssm write rejects profile with access key",
+			args: []string{
+				"write", "--source", sourceFile,
+				"awsssm",
+				"--path", "/app",
+				"--profile", "profile",
+				"--access-key", "access",
+			},
+			wantOutput: "if --profile is specified",
+		},
+		{
+			name: "bad path awsssm write requires region without profile",
+			args: []string{
+				"write", "--source", sourceFile,
+				"awsssm",
+				"--path", "/app",
+			},
+			wantOutput: "if --profile is not specified",
+		},
+		{
+			name: "bad path awsssm write rejects secret key without access key",
+			args: []string{
+				"write", "--source", sourceFile,
+				"awsssm",
+				"--path", "/app",
+				"--region", "us-east-1",
+				"--secret-key", "secret-key",
+			},
+			wantOutput: "if --secret-key is specified",
+		},
+		{
+			name: "bad path awsssm write rejects access key without secret key",
+			args: []string{
+				"write", "--source", sourceFile,
+				"awsssm",
+				"--path", "/app",
+				"--region", "us-east-1",
+				"--access-key", "access",
+			},
+			wantOutput: "if --access-key is specified",
+		},
+		{
+			name: "bad path awsssm write requires path",
+			args: []string{
+				"write", "--source", sourceFile,
+				"awsssm",
+				"--region", "us-east-1",
+			},
+			wantOutput: "--path is required",
+		},
+		{
+			name: "bad path vault load validates required local configuration",
+			args: []string{
+				"load", "vault",
+			},
+			wantOutput: "invalid struct",
+		},
+		{
+			name: "bad path vault write validates required local configuration",
+			args: []string{
+				"write", "--source", sourceFile,
+				"vault",
+			},
+			wantOutput: "invalid struct",
+		},
+		{
+			name: "bad path github write requires token before network access",
+			args: []string{
+				"write", "--source", sourceFile,
+				"github",
+				"--owner", "owner",
+				"--repo", "repo",
+			},
+			wantOutput: "GITHUB_TOKEN",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output, err := runCLIHelper(t, t.TempDir(), nil, false, tt.args...)
+
+			assertProcessExitCode(t, 1, err, output)
+			assert.Contains(t, output, tt.wantOutput)
+		})
+	}
+}
+
+func TestCLIStartValidation(t *testing.T) {
+	tests := []struct {
+		name       string
+		args       []string
+		wantOutput string
+	}{
+		{
+			name:       "bad path destination missing",
+			args:       []string{"bridge", "start"},
+			wantOutput: "missing required flag --destination",
+		},
+		{
+			name: "bad path server missing",
+			args: []string{
+				"bridge", "start",
+				"--destination", "127.0.0.1:8080",
+			},
+			wantOutput: "missing required flag --server",
+		},
+		{
+			name: "bad path source missing",
+			args: []string{
+				"bridge", "start",
+				"--destination", "127.0.0.1:8080",
+				"--server", "user@example.test",
+			},
+			wantOutput: "missing required flag --source",
+		},
+		{
+			name: "bad path authentication missing",
+			args: []string{
+				"bridge", "start",
+				"--destination", "127.0.0.1:8080",
+				"--server", "user@example.test",
+				"--source", "127.0.0.1:9090",
+			},
+			wantOutput: "missing required flag --key or --key-value",
+		},
+		{
+			name: "bad path key modes are mutually exclusive",
+			args: []string{
+				"bridge", "start",
+				"--destination", "127.0.0.1:8080",
+				"--server", "user@example.test",
+				"--source", "127.0.0.1:9090",
+				"--key", "key-file",
+				"--key-value", "key-value",
+			},
+			wantOutput: "or --key or --key-value",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output, err := runCLIHelper(t, t.TempDir(), nil, false, tt.args...)
+
+			assertProcessExitCode(t, 1, err, output)
+			assert.Contains(t, output, tt.wantOutput)
+		})
+	}
+}
+
+func TestExecuteWrapperErrorPath(t *testing.T) {
+	output, err := runCLIHelper(
+		t,
+		t.TempDir(),
+		nil,
+		true,
+		"definitely-not-a-command",
+	)
+
+	assertProcessExitCode(t, 1, err, output)
+}
+
+func TestCLIExecuteHelper(t *testing.T) {
+	if os.Getenv(cliExecuteHelperEnv) == "" {
+		return
+	}
+
+	rootCmd.SetArgs(cliArguments())
+
+	var output bytes.Buffer
+	rootCmd.SetOut(&output)
+	rootCmd.SetErr(&output)
+
+	if os.Getenv(cliFakeProvidersEnv) != "" {
+		installCLIProviderFakes()
+	}
+
+	if os.Getenv(cliUseWrapperEnv) != "" {
+		Execute()
+
+		return
+	}
+
+	err := rootCmd.Execute()
+	_, _ = os.Stdout.Write(output.Bytes())
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
+}
+
+func cliArguments() []string {
+	for i, arg := range os.Args {
+		if arg == "--" {
+			return os.Args[i+1:]
+		}
+	}
+
+	return nil
+}
+
+func runCLIHelper(
+	t *testing.T,
+	workDir string,
+	environment map[string]string,
+	useExecuteWrapper bool,
+	args ...string,
+) (string, error) {
+	t.Helper()
+
+	commandArgs := []string{
+		"-test.run=^TestCLIExecuteHelper$",
+		"--",
+	}
+	commandArgs = append(commandArgs, args...)
+
+	command := exec.Command(os.Args[0], commandArgs...)
+	command.Dir = workDir
+	if stdin := environment[cliStdinEnv]; stdin != "" {
+		command.Stdin = strings.NewReader(stdin)
+	}
+
+	overrides := map[string]string{
+		cliExecuteHelperEnv:             "1",
+		"AWS_ACCESS_KEY_ID":             "",
+		"AWS_PROFILE":                   "",
+		"AWS_REGION":                    "",
+		"AWS_SECRET_ACCESS_KEY":         "",
+		"AWSSM_SECRET_NAME":             "",
+		"AWSSSM_PARAMETER_NAME":         "",
+		"AWSSSM_PATH":                   "",
+		"CONFIGURER_BRIDGE_DESTINATION": "",
+		"CONFIGURER_BRIDGE_KEY":         "",
+		"CONFIGURER_BRIDGE_SERVER":      "",
+		"CONFIGURER_BRIDGE_SOURCE":      "",
+		"GITHUB_TOKEN":                  "",
+		"VAULT_ADDR":                    "",
+		"VAULT_APP_ROLE":                "",
+		"VAULT_APP_ROLE_ID":             "",
+		"VAULT_APP_SECRET_ID":           "",
+		"VAULT_MOUNT_PATH":              "",
+		"VAULT_NAMESPACE":               "",
+		"VAULT_SECRET_PATH":             "",
+		"VAULT_TOKEN":                   "",
+	}
+
+	if useExecuteWrapper {
+		overrides[cliUseWrapperEnv] = "1"
+	}
+
+	for key, value := range environment {
+		overrides[key] = value
+	}
+
+	command.Env = environmentWithOverrides(overrides)
+
+	output, err := command.CombinedOutput()
+
+	return string(output), err
+}
+
+func environmentWithOverrides(overrides map[string]string) []string {
+	environment := make([]string, 0, len(os.Environ())+len(overrides))
+
+	for _, entry := range os.Environ() {
+		key, _, _ := strings.Cut(entry, "=")
+		if _, overridden := overrides[key]; overridden {
+			continue
+		}
+
+		environment = append(environment, entry)
+	}
+
+	for key, value := range overrides {
+		environment = append(environment, key+"="+value)
+	}
+
+	return environment
+}
+
+func installCLIProviderFakes() {
+	newAWSSMProvider = func(
+		override, rawValue bool,
+		config *awssm.Config,
+		secretInformation *awssm.SecretInformation,
+	) (provider.IProvider, error) {
+		if expectedRegion := os.Getenv(cliFakeExpectedRegionEnv); expectedRegion != "" &&
+			config.Region != expectedRegion {
+			return nil, fmt.Errorf("region binding: got %q, want %q", config.Region, expectedRegion)
+		}
+
+		if err := validateFakeProviderInput("awssm", map[string]interface{}{
+			"config": fakeAWSConfig(
+				config.Region,
+				config.Profile,
+				config.AccessKey,
+				config.SecretKey,
+			),
+			"secretNames": secretInformation.SecretNames,
+		}); err != nil {
+			return nil, err
+		}
+
+		return noop.New(override, rawValue)
+	}
+
+	newAWSSSMProvider = func(
+		override, rawValue bool,
+		config *awsssm.Config,
+		parameterInformation *awsssm.ParameterInformation,
+	) (provider.IProvider, error) {
+		if err := validateFakeProviderInput("awsssm", map[string]interface{}{
+			"config": fakeAWSConfig(
+				config.Region,
+				config.Profile,
+				config.AccessKey,
+				config.SecretKey,
+			),
+			"parameterNames": parameterInformation.ParameterNames,
+			"path":           parameterInformation.Path,
+			"recursive":      parameterInformation.Recursive,
+			"withDecryption": parameterInformation.WithDecryption,
+		}); err != nil {
+			return nil, err
+		}
+
+		return noop.New(override, rawValue)
+	}
+
+	newVaultProvider = func(
+		override, rawValue bool,
+		auth *vault.Auth,
+		secretInformation *vault.SecretInformation,
+	) (provider.IProvider, error) {
+		if err := validateFakeProviderInput("vault", map[string]interface{}{
+			"auth": map[string]interface{}{
+				"address":   auth.Address,
+				"appRole":   auth.AppRole,
+				"namespace": auth.Namespace,
+				"roleID":    auth.RoleID,
+				"secretID":  auth.SecretID,
+				"token":     auth.Token,
+			},
+			"secretInformation": map[string]interface{}{
+				"mountPath":  secretInformation.MountPath,
+				"secretPath": secretInformation.SecretPath,
+			},
+		}); err != nil {
+			return nil, err
+		}
+
+		return noop.New(override, rawValue)
+	}
+
+	newGitHubProvider = func(
+		override, rawValue bool,
+		owner, repository string,
+	) (provider.IProvider, error) {
+		if err := validateFakeProviderInput("github", map[string]interface{}{
+			"owner":      owner,
+			"repository": repository,
+		}); err != nil {
+			return nil, err
+		}
+
+		return noop.New(override, rawValue)
+	}
+}
+
+func fakeAWSConfig(region, profile, accessKey, secretKey string) map[string]interface{} {
+	return map[string]interface{}{
+		"accessKey": accessKey,
+		"profile":   profile,
+		"region":    region,
+		"secretKey": secretKey,
+	}
+}
+
+func fakeVaultInput() map[string]interface{} {
+	return map[string]interface{}{
+		"auth": map[string]interface{}{
+			"address":   "https://vault.example.test",
+			"appRole":   "role",
+			"namespace": "namespace",
+			"roleID":    "role-id",
+			"secretID":  "secret-id",
+			"token":     "token",
+		},
+		"secretInformation": map[string]interface{}{
+			"mountPath":  "secret",
+			"secretPath": "app/config",
+		},
+	}
+}
+
+func fakeProviderInput(kind string, values map[string]interface{}) string {
+	data, err := json.Marshal(map[string]interface{}{
+		"kind":   kind,
+		"values": values,
+	})
+	if err != nil {
+		panic(err)
+	}
+
+	return string(data)
+}
+
+func validateFakeProviderInput(kind string, values map[string]interface{}) error {
+	expectedJSON := os.Getenv(cliFakeExpectedInputEnv)
+	if expectedJSON == "" {
+		return nil
+	}
+
+	actualJSON := fakeProviderInput(kind, values)
+
+	var expected, actual interface{}
+	if err := json.Unmarshal([]byte(expectedJSON), &expected); err != nil {
+		return fmt.Errorf("decode expected fake provider input: %w", err)
+	}
+
+	if err := json.Unmarshal([]byte(actualJSON), &actual); err != nil {
+		return fmt.Errorf("decode actual fake provider input: %w", err)
+	}
+
+	if !reflect.DeepEqual(expected, actual) {
+		return fmt.Errorf("provider flag binding: got %s, want %s", actualJSON, expectedJSON)
+	}
+
+	return nil
+}

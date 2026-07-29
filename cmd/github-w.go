@@ -9,6 +9,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/thalesfsp/configurer/github"
 	"github.com/thalesfsp/configurer/option"
+	"github.com/thalesfsp/configurer/provider"
 	"github.com/thalesfsp/configurer/util"
 )
 
@@ -18,6 +19,13 @@ var (
 	target                   string
 	variable                 bool
 )
+
+var newGitHubProvider = func(
+	override, rawValue bool,
+	owner, repository string,
+) (provider.IProvider, error) {
+	return github.New(override, rawValue, owner, repository)
+}
 
 // githubWCmd represents the env command.
 var githubWCmd = &cobra.Command{
@@ -50,7 +58,7 @@ to read your public key.
 			log.Fatalln(err)
 		}
 
-		p, err := github.New(false, false, owner, repo)
+		p, err := newGitHubProvider(false, false, owner, repo)
 		if err != nil {
 			log.Fatalln(err)
 		}

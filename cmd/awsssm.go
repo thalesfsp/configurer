@@ -11,6 +11,8 @@ import (
 	"github.com/thalesfsp/configurer/option"
 )
 
+var newAWSSSMProvider = awsssm.New
+
 // awsssmCmd represents the awsssm command.
 var awsssmCmd = &cobra.Command{
 	Aliases: []string{"awsssm", "ssm"},
@@ -190,7 +192,7 @@ more secure.
 			paramInfo.ParameterNames = []string{paramName}
 		}
 
-		awsssmProvider, err := awsssm.New(shouldOverride, rawValue, config, paramInfo)
+		awsssmProvider, err := newAWSSSMProvider(shouldOverride, rawValue, config, paramInfo)
 		if err != nil {
 			log.Fatalln(err)
 		}

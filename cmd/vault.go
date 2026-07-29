@@ -10,6 +10,8 @@ import (
 	"github.com/thalesfsp/configurer/vault"
 )
 
+var newVaultProvider = vault.New
+
 // vaultCmd represents the vault command.
 var vaultCmd = &cobra.Command{
 	Aliases: []string{"v"},
@@ -110,7 +112,7 @@ more secure.
 			SecretPath: cmd.Flag("secret-path").Value.String(),
 		}
 
-		vaultProvider, err := vault.New(shouldOverride, rawValue, auth, sI)
+		vaultProvider, err := newVaultProvider(shouldOverride, rawValue, auth, sI)
 		if err != nil {
 			log.Fatalln(err)
 		}

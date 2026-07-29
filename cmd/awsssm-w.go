@@ -154,7 +154,7 @@ more secure.
 			WithDecryption: true,
 		}
 
-		awsssmProvider, err := awsssm.New(false, false, config, paramInfo)
+		awsssmProvider, err := newAWSSSMProvider(false, false, config, paramInfo)
 		if err != nil {
 			log.Fatalln(err)
 		}
