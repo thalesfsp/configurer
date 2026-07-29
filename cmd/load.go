@@ -22,6 +22,8 @@ var loadCmd = &cobra.Command{
 	Aliases: []string{"l"},
 	Use:     "load",
 	Short:   "Load the configuration from the specified provider",
+	Args:    cobra.NoArgs,
+	RunE:    subcommandRequired,
 }
 
 func init() {

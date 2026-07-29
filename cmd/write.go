@@ -11,6 +11,8 @@ var writeCmd = &cobra.Command{
 	Aliases: []string{"w"},
 	Use:     "write",
 	Short:   "Write the configuration to the specified provider",
+	Args:    cobra.NoArgs,
+	RunE:    subcommandRequired,
 }
 
 func init() {
