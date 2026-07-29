@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/kvz/logstreamer"
@@ -180,17 +181,9 @@ func runCommand(
 
 	// Signal handling setup
 	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt)
-
-	go func() {
-		<-stop
-
-		time.Sleep(shutdownTimeout)
-
-		c.Process.Kill()
-
-		handleCommandKill(p)
-	}()
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	childDone := make(chan struct{})
+	shutdownStarted := make(chan struct{})
 
 	//////
 	// Redirect output.
@@ -281,7 +274,7 @@ func runCommand(
 			// Flush every 1 second.
 			for {
 				select {
-				case <-stop:
+				case <-shutdownStarted:
 					return
 				default:
 					// Only if there is something to flush.
@@ -349,8 +342,36 @@ func runCommand(
 		}()
 	}
 
-	// Start command and wait it to finish.
-	if err := c.Run(); err != nil {
+	// Start command.
+	if err := c.Start(); err != nil {
+		cliLogger.Errorlnf("error running command: %s", err)
+
+		return 1
+	}
+
+	go func() {
+		s := <-stop
+		close(shutdownStarted)
+		c.Process.Signal(s)
+
+		timer := time.NewTimer(shutdownTimeout)
+		defer timer.Stop()
+
+		select {
+		case <-childDone:
+			return
+		case <-timer.C:
+			if err := c.Process.Kill(); err == nil {
+				handleCommandKill(p)
+			}
+		}
+	}()
+
+	// Wait for the command to finish.
+	err := c.Wait()
+	close(childDone)
+
+	if err != nil {
 		// If an error occurs, handle it appropriately.
 		// For example, log the error and return a non-zero status.
 		cliLogger.Errorlnf("error running command: %s", err)
