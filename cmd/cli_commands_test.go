@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/thalesfsp/configurer/awssm"
 	"github.com/thalesfsp/configurer/awsssm"
+	"github.com/thalesfsp/configurer/azkv"
 	"github.com/thalesfsp/configurer/doppler"
 	"github.com/thalesfsp/configurer/noop"
 	"github.com/thalesfsp/configurer/provider"
@@ -392,6 +393,45 @@ func TestCLIProviderSuccessPathsUseLocalFakes(t *testing.T) {
 			},
 		},
 		{
+			name: "azkv load alias binds vault and multiple secret names",
+			args: []string{
+				"--flush-interval=1ms",
+				"load",
+				"--override",
+				"--rawValue",
+				"akv",
+				"--vault-url", "https://azure-vault.example.test",
+				"--secret-name", "first-secret",
+				"--secret-name", "second-secret",
+			},
+			provider: "azkv",
+			wantInput: map[string]interface{}{
+				"vaultURL":    "https://azure-vault.example.test",
+				"secretNames": []string{"first-secret", "second-secret"},
+				"override":    true,
+				"rawValue":    true,
+			},
+		},
+		{
+			name: "azkv load binds environment fallbacks",
+			args: []string{
+				"--flush-interval=1ms",
+				"load",
+				"azkv",
+			},
+			environment: map[string]string{
+				"AZURE_KEY_VAULT_URL":          "https://environment-vault.example.test",
+				"AZURE_KEY_VAULT_SECRET_NAMES": "environment-one,environment-two",
+			},
+			provider: "azkv",
+			wantInput: map[string]interface{}{
+				"vaultURL":    "https://environment-vault.example.test",
+				"secretNames": []string{"environment-one", "environment-two"},
+				"override":    false,
+				"rawValue":    false,
+			},
+		},
+		{
 			name: "vault load token flags transformations and dump",
 			args: []string{
 				"--flush-interval=1ms",
@@ -523,6 +563,38 @@ func TestCLIProviderSuccessPathsUseLocalFakes(t *testing.T) {
 				"path":           "/app",
 				"recursive":      false,
 				"withDecryption": true,
+			},
+		},
+		{
+			name: "azkv write binds vault URL",
+			args: []string{
+				"write", "--source", sourceFile,
+				"azkv",
+				"--vault-url", "https://azure-vault.example.test",
+			},
+			provider: "azkv",
+			wantInput: map[string]interface{}{
+				"vaultURL":    "https://azure-vault.example.test",
+				"secretNames": nil,
+				"override":    false,
+				"rawValue":    false,
+			},
+		},
+		{
+			name: "azkv write binds vault URL environment fallback",
+			args: []string{
+				"write", "--source", sourceFile,
+				"azkv",
+			},
+			environment: map[string]string{
+				"AZURE_KEY_VAULT_URL": "https://environment-vault.example.test",
+			},
+			provider: "azkv",
+			wantInput: map[string]interface{}{
+				"vaultURL":    "https://environment-vault.example.test",
+				"secretNames": nil,
+				"override":    false,
+				"rawValue":    false,
 			},
 		},
 		{
@@ -754,6 +826,21 @@ func TestCLIProviderValidationWithoutExternalServices(t *testing.T) {
 				"load", "vault",
 			},
 			wantOutput: "invalid struct",
+		},
+		{
+			name: "bad path azkv load requires vault URL",
+			args: []string{
+				"load", "azkv",
+			},
+			wantOutput: "VaultURL",
+		},
+		{
+			name: "bad path azkv write requires vault URL",
+			args: []string{
+				"write", "--source", sourceFile,
+				"azkv",
+			},
+			wantOutput: "VaultURL",
 		},
 		{
 			name: "bad path vault write validates required local configuration",
@@ -1017,6 +1104,8 @@ func runCLIHelper(
 		"AWSSM_SECRET_NAME":             "",
 		"AWSSSM_PARAMETER_NAME":         "",
 		"AWSSSM_PATH":                   "",
+		"AZURE_KEY_VAULT_SECRET_NAMES":  "",
+		"AZURE_KEY_VAULT_URL":           "",
 		"CONFIGURER_BRIDGE_DESTINATION": "",
 		"CONFIGURER_BRIDGE_KEY":         "",
 		"CONFIGURER_BRIDGE_SERVER":      "",
@@ -1070,6 +1159,22 @@ func environmentWithOverrides(overrides map[string]string) []string {
 }
 
 func installCLIProviderFakes() {
+	newAZKVProvider = func(
+		override, rawValue bool,
+		config *azkv.Config,
+	) (provider.IProvider, error) {
+		if err := validateFakeProviderInput("azkv", map[string]interface{}{
+			"vaultURL":    config.VaultURL,
+			"secretNames": config.SecretNames,
+			"override":    override,
+			"rawValue":    rawValue,
+		}); err != nil {
+			return nil, err
+		}
+
+		return noop.New(override, rawValue)
+	}
+
 	newAWSSMProvider = func(
 		override, rawValue bool,
 		config *awssm.Config,
