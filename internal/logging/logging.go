@@ -5,6 +5,8 @@
 package logging
 
 import (
+	"sync"
+
 	"github.com/thalesfsp/sypl/v2"
 	"github.com/thalesfsp/sypl/v2/level"
 	"github.com/thalesfsp/sypl/v2/processor"
@@ -14,8 +16,12 @@ import (
 // Vars, consts, and types.
 //////
 
-// Singleton.
-var singletonLogger *Logger
+var (
+	// Singleton.
+	singletonLogger *Logger
+
+	singletonLoggerOnce sync.Once
+)
 
 // Logger is the application logger.
 type Logger struct {
@@ -41,7 +47,7 @@ func (l *Logger) Child(name string) *Logger {
 //
 // NOTE: Use `SYPL_LEVEL` env var to overwrite the max level.
 func Get() *Logger {
-	if singletonLogger == nil {
+	singletonLoggerOnce.Do(func() {
 		singletonLogger = &Logger{
 			sypl.NewDefault("configurer", level.None),
 		}
@@ -52,9 +58,7 @@ func Get() *Logger {
 		}
 
 		singletonLogger.Traceln("configurer logger setup")
-
-		return singletonLogger
-	}
+	})
 
 	return singletonLogger
 }
