@@ -279,6 +279,8 @@ func runCommand(
 		cliLogger.Debugln("directing output to", logOutputsStr)
 	}
 
+	var esFlusherDone <-chan struct{}
+
 	if shouldUseElasticsearch(logOutputsStr) {
 		bufStdOut := new(syncBuffer)
 		bufStdErr := new(syncBuffer)
@@ -403,8 +405,19 @@ func runCommand(
 		c.Stderr = stderrMultiWriter
 
 		// Start a goroutine for periodic flushing.
+		flusherDone := make(chan struct{})
+		esFlusherDone = flusherDone
+
 		go func() {
+			defer close(flusherDone)
+
 			// Flush every 1 second.
+			flushStdOut(false)
+			flushStdErr(false)
+
+			ticker := time.NewTicker(flushInterval)
+			defer ticker.Stop()
+
 			for {
 				select {
 				case <-shutdownStarted:
@@ -412,11 +425,14 @@ func runCommand(
 					flushStdErr(true)
 
 					return
-				default:
+				case <-childDone:
+					flushStdOut(true)
+					flushStdErr(true)
+
+					return
+				case <-ticker.C:
 					flushStdOut(false)
 					flushStdErr(false)
-
-					time.Sleep(flushInterval)
 				}
 			}
 		}()
@@ -425,6 +441,11 @@ func runCommand(
 	// Start command.
 	if err := c.Start(); err != nil {
 		cliLogger.Errorlnf("error running command: %s", err)
+
+		close(childDone)
+		if esFlusherDone != nil {
+			<-esFlusherDone
+		}
 
 		return 1
 	}
@@ -450,6 +471,9 @@ func runCommand(
 	// Wait for the command to finish.
 	err := c.Wait()
 	close(childDone)
+	if esFlusherDone != nil {
+		<-esFlusherDone
+	}
 
 	if err != nil {
 		cliLogger.Errorlnf("error running command: %s", err)
