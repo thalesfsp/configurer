@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -71,7 +72,7 @@ func (b *syncBuffer) readString(delimiter byte, preservePartial bool) (string, e
 	defer b.mutex.Unlock()
 
 	line, err := b.buffer.ReadString(delimiter)
-	if preservePartial && err == io.EOF && line != "" {
+	if preservePartial && errors.Is(err, io.EOF) && line != "" {
 		b.buffer.Reset()
 		b.buffer.WriteString(line)
 	}
@@ -108,7 +109,7 @@ func flushESBuffer(
 		}
 
 		if err != nil {
-			if err != io.EOF {
+			if !errors.Is(err, io.EOF) {
 				logReadError(line, err)
 			}
 

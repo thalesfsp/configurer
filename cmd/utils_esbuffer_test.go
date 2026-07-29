@@ -15,8 +15,8 @@ const esBufferNegativeControlEnv = "CONFIGURER_ESBUFFER_NEGATIVE_CONTROL"
 
 type concurrentLineBuffer interface {
 	Len() int
-	ReadString(byte) (string, error)
-	Write([]byte) (int, error)
+	ReadString(delimiter byte) (string, error)
+	Write(p []byte) (n int, err error)
 }
 
 func TestSyncBufferConcurrentWriteAndReadString(t *testing.T) {

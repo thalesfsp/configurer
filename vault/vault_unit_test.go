@@ -156,14 +156,20 @@ func newVaultTestServer(
 	return testServer, requests, &callCount
 }
 
-func tryNewVaultHTTPTestServer(handler http.Handler) (server *httptest.Server) {
-	defer func() {
-		if recover() != nil {
-			server = nil
-		}
+func tryNewVaultHTTPTestServer(handler http.Handler) *httptest.Server {
+	var testServer *httptest.Server
+
+	func() {
+		defer func() {
+			if recover() != nil {
+				testServer = nil
+			}
+		}()
+
+		testServer = httptest.NewServer(handler)
 	}()
 
-	return httptest.NewServer(handler)
+	return testServer
 }
 
 func receiveVaultRequest(t *testing.T, requests <-chan recordedVaultRequest) recordedVaultRequest {
@@ -273,6 +279,8 @@ func TestNewWithConfigValidationFailures(t *testing.T) {
 				Address: "http://127.0.0.1:8200",
 			},
 			config: func(t *testing.T) Config {
+				t.Helper()
+
 				return newVaultTestConfig(t, "http://127.0.0.1:8200")
 			},
 			secret:       validSecretInformation(),
@@ -285,6 +293,8 @@ func TestNewWithConfigValidationFailures(t *testing.T) {
 				Token:   "test-token",
 			},
 			config: func(t *testing.T) Config {
+				t.Helper()
+
 				return &api.Config{
 					Address:    "://invalid",
 					HttpClient: &http.Client{},
@@ -300,6 +310,8 @@ func TestNewWithConfigValidationFailures(t *testing.T) {
 				Token:   "test-token",
 			},
 			config: func(t *testing.T) Config {
+				t.Helper()
+
 				return newVaultTestConfig(t, "http://127.0.0.1:8200")
 			},
 			secret:       validSecretInformation(),
