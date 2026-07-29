@@ -183,17 +183,34 @@ func TestE2EWriteDotenvTarget(t *testing.T) {
 	}
 }
 
-// Characterization: an unknown load subcommand currently prints help and
-// exits 0. Arguably it should exit non-zero (a typo silently no-ops in
-// scripts) — tracked as an improvement; this test documents the current
-// contract so any change to it is deliberate.
-func TestE2EUnknownSubcommandPrintsHelp(t *testing.T) {
-	stdout, stderr, code := run(t, nil, "l", "definitely-not-a-provider")
-	if code != 0 {
-		t.Fatalf("current contract is exit 0 with help; got %d", code)
+func TestE2EUnknownSubcommandFails(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{
+			name: "load",
+			args: []string{"load", "definitely-not-a-provider"},
+		},
+		{
+			name: "write",
+			args: []string{"write", "definitely-not-a-provider"},
+		},
 	}
-	if !strings.Contains(stdout+stderr, "Usage") && !strings.Contains(stdout+stderr, "Available Commands") {
-		t.Fatalf("expected help output; stdout=%q stderr=%q", stdout, stderr)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stdout, stderr, code := run(t, nil, tt.args...)
+			if code == 0 {
+				t.Fatalf("expected non-zero exit; stdout=%q stderr=%q", stdout, stderr)
+			}
+
+			output := stdout + stderr
+			if !strings.Contains(output, "unknown command") ||
+				!strings.Contains(output, "definitely-not-a-provider") {
+				t.Fatalf("expected unknown command error; stdout=%q stderr=%q", stdout, stderr)
+			}
+		})
 	}
 }
 

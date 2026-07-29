@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/spf13/cobra"
+	"github.com/thalesfsp/customerror"
 	"github.com/thalesfsp/sypl/v2"
 	"github.com/thalesfsp/sypl/v2/level"
 )
@@ -32,10 +33,16 @@ var (
 var rootCmd = &cobra.Command{
 	Use:   "configurer",
 	Short: "configurer",
+	Args:  cobra.NoArgs,
+	RunE:  subcommandRequired,
 	Long: `Configurer load configuration/secrets from different
 sources (providers) and export them as env vars. It allows to run
 one or multiple commands with the loaded env vars. See each provider
 documentation for more details.`,
+}
+
+func subcommandRequired(_ *cobra.Command, _ []string) error {
+	return customerror.NewRequiredError("subcommand")
 }
 
 func init() {

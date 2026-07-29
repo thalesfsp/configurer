@@ -773,6 +773,76 @@ func TestExecuteWrapperErrorPath(t *testing.T) {
 	assertProcessExitCode(t, 1, err, output)
 }
 
+//////
+// Parent command validation.
+//////
+
+func TestCLIParentCommandsRequireSubcommands(t *testing.T) {
+	tests := []struct {
+		name         string
+		args         []string
+		wantExitCode int
+		wantOutput   string
+	}{
+		{
+			name:         "happy path load help exits zero",
+			args:         []string{"load", "--help"},
+			wantExitCode: 0,
+			wantOutput:   "Available Providers",
+		},
+		{
+			name:         "happy path write help exits zero",
+			args:         []string{"write", "--help"},
+			wantExitCode: 0,
+			wantOutput:   "Available Providers",
+		},
+		{
+			name:         "bad path load rejects unknown provider",
+			args:         []string{"load", "definitely-not-a-provider"},
+			wantExitCode: 1,
+			wantOutput:   `unknown command "definitely-not-a-provider" for "configurer load"`,
+		},
+		{
+			name:         "bad path write rejects unknown provider",
+			args:         []string{"write", "definitely-not-a-provider"},
+			wantExitCode: 1,
+			wantOutput:   `unknown command "definitely-not-a-provider" for "configurer write"`,
+		},
+		{
+			name:         "edge path load requires a provider",
+			args:         []string{"load"},
+			wantExitCode: 1,
+			wantOutput:   "subcommand required",
+		},
+		{
+			name:         "edge path write requires a provider",
+			args:         []string{"write"},
+			wantExitCode: 1,
+			wantOutput:   "subcommand required",
+		},
+		{
+			name:         "edge path root requires a subcommand",
+			wantExitCode: 1,
+			wantOutput:   "subcommand required",
+		},
+		{
+			name:         "edge path root help exits zero",
+			args:         []string{"--help"},
+			wantExitCode: 0,
+			wantOutput:   "Available Commands",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			output, err := runCLIHelper(t, t.TempDir(), nil, false, tt.args...)
+
+			assertProcessExitCode(t, tt.wantExitCode, err, output)
+			assert.Contains(t, output, tt.wantOutput)
+		})
+	}
+}
+
 func TestCLIExecuteHelper(t *testing.T) {
 	if os.Getenv(cliExecuteHelperEnv) == "" {
 		return
