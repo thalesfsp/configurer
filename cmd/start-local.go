@@ -55,7 +55,9 @@ var startCmd = &cobra.Command{
 			log.Fatalln("error: missing required flag --source")
 		}
 
-		if bridgeKeyValue == "" && cBK != "" {
+		if bridgeKeyValue != "" {
+			conf.KeyValue = bridgeKeyValue
+		} else if cBK != "" {
 			conf.KeyValue = cBK
 		}
 

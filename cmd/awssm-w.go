@@ -148,7 +148,7 @@ more secure.
 			SecretNames: []string{secretName},
 		}
 
-		awssmProvider, err := awssm.New(false, false, config, sI)
+		awssmProvider, err := newAWSSMProvider(false, false, config, sI)
 		if err != nil {
 			log.Fatalln(err)
 		}

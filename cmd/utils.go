@@ -37,6 +37,8 @@ import (
 // Regex pattern for .env extensions (.env, .env.local, .env.prod, etc.)
 var envRegex = regexp.MustCompile(`^\.env(\..+)?$`)
 
+var newElasticsearchOutput = es.OutputWithDynamicIndex
+
 // shouldUseElasticsearch reports whether the configured log outputs request the
 // ElasticSearch output. The comma-separated list of outputs must contain the
 // "elasticsearch" token as a substring.
@@ -308,7 +310,7 @@ func runCommand(
 			esConfig.Addresses = []string{"http://localhost:9200"}
 		}
 
-		esOutput := es.OutputWithDynamicIndex(
+		esOutput := newElasticsearchOutput(
 			func() string {
 				return fmt.Sprintf("%s-%s", esConfig.Index, time.Now().Format("2006-01"))
 			},
@@ -450,9 +452,14 @@ func runCommand(
 	close(childDone)
 
 	if err != nil {
-		// If an error occurs, handle it appropriately.
-		// For example, log the error and return a non-zero status.
 		cliLogger.Errorlnf("error running command: %s", err)
+
+		var exitError *exec.ExitError
+		if errors.As(err, &exitError) {
+			handleNonZeroExit(p, c, cmdAndArgs)
+
+			return exitError.ExitCode()
+		}
 
 		return 1
 	}
@@ -731,7 +738,9 @@ func LoadFromText(
 	}
 
 	for k, v := range m {
-		os.Setenv(k, fmt.Sprintf("%v", v))
+		if _, err := provider.ExportToEnvVar(dotEnvProvider, k, v); err != nil {
+			return nil, err
+		}
 	}
 
 	return dotEnvProvider, nil

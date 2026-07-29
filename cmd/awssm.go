@@ -11,6 +11,8 @@ import (
 	"github.com/thalesfsp/configurer/option"
 )
 
+var newAWSSMProvider = awssm.New
+
 // awssmCmd represents the awssm command.
 var awssmCmd = &cobra.Command{
 	Aliases: []string{"awssm", "asm"},
@@ -144,6 +146,10 @@ more secure.
 			config.Region = region
 		}
 
+		if profile == "" && accessKey == "" && secretKey == "" {
+			config.Region = region
+		}
+
 		//////
 		// Handle secret names from flag or environment variable.
 		//////
@@ -154,7 +160,7 @@ more secure.
 			SecretNames: []string{secretName},
 		}
 
-		awssmProvider, err := awssm.New(shouldOverride, rawValue, config, sI)
+		awssmProvider, err := newAWSSMProvider(shouldOverride, rawValue, config, sI)
 		if err != nil {
 			log.Fatalln(err)
 		}

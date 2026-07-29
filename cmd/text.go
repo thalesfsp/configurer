@@ -65,7 +65,7 @@ NOTE: The "-c" flag have precedence over double dash (--)
 func init() {
 	loadCmd.AddCommand(textCmd)
 
-	loadCmd.Flags().StringVarP(&contentFormat, "format", "f", "env", "env format")
+	textCmd.Flags().StringVarP(&contentFormat, "format", "f", "env", "env format")
 
 	textCmd.SetUsageTemplate(providerUsageTemplate)
 }
