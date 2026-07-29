@@ -1,14 +1,24 @@
 package provider
 
 import (
+	"context"
 	"io"
+	"os"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/thalesfsp/configurer/internal/logging"
+	"github.com/thalesfsp/configurer/option"
 	"github.com/thalesfsp/sypl/v2"
 	"github.com/thalesfsp/sypl/v2/level"
 	"github.com/thalesfsp/sypl/v2/output"
 	"github.com/thalesfsp/sypl/v2/shared"
 )
+
+//////
+// Helpers.
+//////
 
 // newLoggerWithMaxLevels builds a logger with one discard output per level.
 func newLoggerWithMaxLevels(levels ...level.Level) *sypl.Sypl {
@@ -20,6 +30,29 @@ func newLoggerWithMaxLevels(levels ...level.Level) *sypl.Sypl {
 
 	return l
 }
+
+type exportTestProvider struct {
+	*Provider
+}
+
+func (p *exportTestProvider) Load(
+	_ context.Context,
+	_ ...option.LoadKeyFunc,
+) (map[string]string, error) {
+	return nil, ErrNotSupported
+}
+
+func (p *exportTestProvider) Write(
+	_ context.Context,
+	_ map[string]interface{},
+	_ ...option.WriteFunc,
+) error {
+	return ErrNotSupported
+}
+
+//////
+// Tests.
+//////
 
 // TestAnyMaxLevel proves the anyMaxLevel helper preserves the removed v1
 // Sypl.AnyMaxLevel semantics used by the ExportToEnvVar guard: true when
@@ -107,6 +140,123 @@ func TestAnyMaxLevel(t *testing.T) {
 					got, tt.wantTrace, tt.description,
 				)
 			}
+		})
+	}
+}
+
+func TestExportToEnvVar(t *testing.T) {
+	const key = "CONFIGURER_PROVIDER_EXPORT_TEST"
+
+	tests := []struct {
+		name         string
+		key          string
+		initialValue string
+		value        interface{}
+		override     bool
+		rawValue     bool
+		logLevels    []level.Level
+		want         string
+		wantErr      bool
+	}{
+		{
+			name:  "exports new string",
+			key:   key,
+			value: "loaded",
+			want:  "loaded",
+		},
+		{
+			name:         "existing environment value wins",
+			key:          key,
+			initialValue: "existing",
+			value:        "loaded",
+			want:         "existing",
+		},
+		{
+			name:         "override replaces existing environment value",
+			key:          key,
+			initialValue: "existing",
+			value:        "loaded",
+			override:     true,
+			want:         "loaded",
+		},
+		{
+			name:  "empty incoming value remains empty",
+			key:   key,
+			value: "",
+			want:  "",
+		},
+		{
+			name:         "empty existing value does not block export",
+			key:          key,
+			initialValue: "",
+			value:        "loaded",
+			want:         "loaded",
+		},
+		{
+			name:  "special characters and multiline remain unquoted",
+			key:   key,
+			value: "pa$$ word=\"quoted\"\nnext=line",
+			want:  "pa$$ word=\"quoted\"\nnext=line",
+		},
+		{
+			name:     "raw string preserves Go quoting and escapes",
+			key:      key,
+			value:    "pa$$ word=\"quoted\"\nnext=line",
+			rawValue: true,
+			want:     "\"pa$$ word=\\\"quoted\\\"\\nnext=line\"",
+		},
+		{
+			name:      "debug logging branch",
+			key:       key,
+			value:     42,
+			logLevels: []level.Level{level.Debug},
+			want:      "42",
+		},
+		{
+			name:      "trace logging branch",
+			key:       key,
+			value:     true,
+			logLevels: []level.Level{level.Trace},
+			want:      "true",
+		},
+		{
+			name:    "invalid environment key",
+			key:     "INVALID=KEY",
+			value:   "loaded",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv(shared.LevelEnvVar, "")
+
+			if tt.key != "INVALID=KEY" {
+				t.Setenv(tt.key, tt.initialValue)
+			}
+
+			p := &exportTestProvider{
+				Provider: &Provider{
+					Logger: &logging.Logger{
+						Sypl: newLoggerWithMaxLevels(tt.logLevels...),
+					},
+					Name:     "test",
+					Override: tt.override,
+					RawValue: tt.rawValue,
+				},
+			}
+
+			got, err := ExportToEnvVar(p, tt.key, tt.value)
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Empty(t, got)
+
+				return
+			}
+
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+			assert.Equal(t, tt.want, os.Getenv(tt.key))
 		})
 	}
 }
