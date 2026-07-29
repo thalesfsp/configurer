@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -40,6 +41,86 @@ var envRegex = regexp.MustCompile(`^\.env(\..+)?$`)
 // "elasticsearch" token as a substring.
 func shouldUseElasticsearch(logOutputsStr string) bool {
 	return strings.Contains(logOutputsStr, "elasticsearch")
+}
+
+type syncBuffer struct {
+	buffer bytes.Buffer
+	mutex  sync.Mutex
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
+	return b.buffer.Write(p)
+}
+
+func (b *syncBuffer) Len() int {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
+	return b.buffer.Len()
+}
+
+func (b *syncBuffer) ReadString(delimiter byte) (string, error) {
+	return b.readString(delimiter, true)
+}
+
+func (b *syncBuffer) readString(delimiter byte, preservePartial bool) (string, error) {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
+	line, err := b.buffer.ReadString(delimiter)
+	if preservePartial && err == io.EOF && line != "" {
+		b.buffer.Reset()
+		b.buffer.WriteString(line)
+	}
+
+	return line, err
+}
+
+func (b *syncBuffer) readRemaining() string {
+	b.mutex.Lock()
+	defer b.mutex.Unlock()
+
+	remaining := b.buffer.String()
+	b.buffer.Reset()
+
+	return remaining
+}
+
+func flushESBuffer(
+	buffer *syncBuffer,
+	final bool,
+	logLine func(string),
+	logReadError func(string, error),
+) {
+	for buffer.Len() > 0 {
+		var (
+			line string
+			err  error
+		)
+
+		if final {
+			line, err = buffer.readString('\n', false)
+		} else {
+			line, err = buffer.ReadString('\n')
+		}
+
+		if err != nil {
+			if err != io.EOF {
+				logReadError(line, err)
+			}
+
+			if final && line != "" {
+				logLine(line)
+			}
+
+			return
+		}
+
+		logLine(line)
+	}
 }
 
 // CommandArgs represents the command and its arguments.
@@ -196,8 +277,8 @@ func runCommand(
 	}
 
 	if shouldUseElasticsearch(logOutputsStr) {
-		bufStdOut := new(bytes.Buffer)
-		bufStdErr := new(bytes.Buffer)
+		bufStdOut := new(syncBuffer)
+		bufStdErr := new(syncBuffer)
 
 		cliLogger.Debugln("setting up elasticsearch output")
 
@@ -259,6 +340,55 @@ func runCommand(
 
 		l.SetDefaultIoWriterLevel(level.Info)
 
+		flushStdOut := func(final bool) {
+			flushESBuffer(
+				bufStdOut,
+				final,
+				func(line string) {
+					// If line is JSON, try to parse it as unstructured and log that.
+					jsonMap := map[string]interface{}{}
+
+					if err := json.Unmarshal([]byte(line), &jsonMap); err == nil {
+						flattened := flatMap(jsonMap)
+
+						l.PrintWithOptions(level.Info, line, sypl.WithFields(flattened))
+					} else {
+						l.Info(line)
+					}
+
+					cliLogger.Debugln("flushed stdout", len(line), "buffer")
+				},
+				func(line string, err error) {
+					l.PrintWithOptions(
+						level.Error,
+						"failed to read stdout buffer",
+						sypl.WithField("error", err),
+						sypl.WithField("line", line),
+					)
+				},
+			)
+		}
+
+		flushStdErr := func(final bool) {
+			flushESBuffer(
+				bufStdErr,
+				final,
+				func(line string) {
+					l.Error(line)
+
+					cliLogger.Debugln("flushed stderr", len(line), "buffer")
+				},
+				func(line string, err error) {
+					l.PrintWithOptions(
+						level.Error,
+						"failed to read stderr buffer",
+						sypl.WithField("error", err),
+						sypl.WithField("line", line),
+					)
+				},
+			)
+		}
+
 		// Create a multi-writer for Stdout
 		stdoutMultiWriter := io.MultiWriter(os.Stdout, bufStdOut)
 
@@ -275,66 +405,13 @@ func runCommand(
 			for {
 				select {
 				case <-shutdownStarted:
+					flushStdOut(true)
+					flushStdErr(true)
+
 					return
 				default:
-					// Only if there is something to flush.
-					if bufStdOut.Len() > 0 {
-						// Read forever til end of line or error.
-						for {
-							line, err := bufStdOut.ReadString('\n')
-							if err != nil {
-								if err != io.EOF {
-									l.PrintWithOptions(
-										level.Error,
-										"failed to read stdout buffer",
-										sypl.WithField("error", err),
-										sypl.WithField("line", line),
-									)
-								}
-
-								// Break only in case of EOF, continue loop otherwise
-								break
-							}
-
-							// If line is JSON, try to parse it as unstructured and log that.
-							jsonMap := map[string]interface{}{}
-
-							if err := json.Unmarshal([]byte(line), &jsonMap); err == nil {
-								flattened := flatMap(jsonMap)
-
-								l.PrintWithOptions(level.Info, line, sypl.WithFields(flattened))
-							} else {
-								l.Info(line)
-							}
-
-							cliLogger.Debugln("flushed stdout", len(line), "buffer")
-						}
-					}
-
-					// Only if there is something to flush.
-					if bufStdErr.Len() > 0 {
-						// Read forever til end of line or error.
-						for {
-							line, err := bufStdErr.ReadString('\n')
-							if err != nil {
-								if err != io.EOF {
-									l.PrintWithOptions(
-										level.Error,
-										"failed to read stderr buffer",
-										sypl.WithField("error", err),
-										sypl.WithField("line", line),
-									)
-								}
-
-								// Break only in case of EOF, continue loop otherwise
-								break
-							}
-
-							l.Error(line)
-
-							cliLogger.Debugln("flushed stderr", len(line), "buffer")
-						}
-					}
+					flushStdOut(false)
+					flushStdErr(false)
 
 					time.Sleep(flushInterval)
 				}
