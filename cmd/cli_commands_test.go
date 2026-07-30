@@ -21,6 +21,7 @@ import (
 	"github.com/thalesfsp/configurer/doppler"
 	"github.com/thalesfsp/configurer/gcpsm"
 	"github.com/thalesfsp/configurer/noop"
+	"github.com/thalesfsp/configurer/onepassword"
 	"github.com/thalesfsp/configurer/provider"
 	"github.com/thalesfsp/configurer/vault"
 )
@@ -416,6 +417,55 @@ func TestCLIProviderSuccessPathsUseLocalFakes(t *testing.T) {
 			},
 		},
 		{
+			name: "onepassword load alias binds flags and load options",
+			args: []string{
+				"--flush-interval=1ms",
+				"load",
+				"--override",
+				"--rawValue",
+				"op",
+				"--host", "https://connect.example.test",
+				"--token", "token",
+				"--vault", "Production",
+				"--item", "Application",
+			},
+			provider: "onepassword",
+			wantInput: map[string]interface{}{
+				"config": map[string]interface{}{
+					"host":  "https://connect.example.test",
+					"token": "token",
+					"vault": "Production",
+					"item":  "Application",
+				},
+				"override": true,
+				"rawValue": true,
+			},
+		},
+		{
+			name: "onepassword load binds environment fallbacks",
+			args: []string{
+				"--flush-interval=1ms",
+				"load", "onepassword",
+			},
+			environment: map[string]string{
+				"OP_CONNECT_HOST":  "https://environment-connect.example.test",
+				"OP_CONNECT_TOKEN": "environment-token",
+				"OP_VAULT":         "Environment Vault",
+				"OP_ITEM":          "Environment Item",
+			},
+			provider: "onepassword",
+			wantInput: map[string]interface{}{
+				"config": map[string]interface{}{
+					"host":  "https://environment-connect.example.test",
+					"token": "environment-token",
+					"vault": "Environment Vault",
+					"item":  "Environment Item",
+				},
+				"override": false,
+				"rawValue": false,
+			},
+		},
+		{
 			name: "awsssm load path flags transformations and dump",
 			args: []string{
 				"--flush-interval=1ms",
@@ -592,6 +642,52 @@ func TestCLIProviderSuccessPathsUseLocalFakes(t *testing.T) {
 					"token":   "dp.pt.environment",
 					"project": "environment-project",
 					"config":  "production",
+				},
+				"override": false,
+				"rawValue": false,
+			},
+		},
+		{
+			name: "onepassword write alias binds flags",
+			args: []string{
+				"write", "--source", sourceFile,
+				"op",
+				"--host", "https://connect.example.test",
+				"--token", "token",
+				"--vault", "Production",
+				"--item", "Application",
+			},
+			provider: "onepassword",
+			wantInput: map[string]interface{}{
+				"config": map[string]interface{}{
+					"host":  "https://connect.example.test",
+					"token": "token",
+					"vault": "Production",
+					"item":  "Application",
+				},
+				"override": false,
+				"rawValue": false,
+			},
+		},
+		{
+			name: "onepassword write binds environment fallbacks",
+			args: []string{
+				"write", "--source", sourceFile,
+				"onepassword",
+			},
+			environment: map[string]string{
+				"OP_CONNECT_HOST":  "https://environment-connect.example.test",
+				"OP_CONNECT_TOKEN": "environment-token",
+				"OP_VAULT":         "Environment Vault",
+				"OP_ITEM":          "Environment Item",
+			},
+			provider: "onepassword",
+			wantInput: map[string]interface{}{
+				"config": map[string]interface{}{
+					"host":  "https://environment-connect.example.test",
+					"token": "environment-token",
+					"vault": "Environment Vault",
+					"item":  "Environment Item",
 				},
 				"override": false,
 				"rawValue": false,
@@ -1214,6 +1310,10 @@ func runCLIHelper(
 		"GCP_PROJECT_ID":                "",
 		"GCPSM_SECRET_NAME":             "",
 		"GOOGLE_CLOUD_PROJECT":          "",
+		"OP_CONNECT_HOST":               "",
+		"OP_CONNECT_TOKEN":              "",
+		"OP_ITEM":                       "",
+		"OP_VAULT":                      "",
 		"VAULT_ADDR":                    "",
 		"VAULT_APP_ROLE":                "",
 		"VAULT_APP_ROLE_ID":             "",
@@ -1386,6 +1486,26 @@ func installCLIProviderFakes() {
 				"token":   config.Token,
 				"project": config.Project,
 				"config":  config.Config,
+			},
+			"override": override,
+			"rawValue": rawValue,
+		}); err != nil {
+			return nil, err
+		}
+
+		return noop.New(override, rawValue)
+	}
+
+	newOnePasswordProvider = func(
+		override, rawValue bool,
+		config *onepassword.Config,
+	) (provider.IProvider, error) {
+		if err := validateFakeProviderInput("onepassword", map[string]interface{}{
+			"config": map[string]interface{}{
+				"host":  config.Host,
+				"token": config.Token,
+				"vault": config.Vault,
+				"item":  config.Item,
 			},
 			"override": override,
 			"rawValue": rawValue,
