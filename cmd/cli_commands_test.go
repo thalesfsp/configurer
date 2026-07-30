@@ -20,6 +20,7 @@ import (
 	"github.com/thalesfsp/configurer/azkv"
 	"github.com/thalesfsp/configurer/doppler"
 	"github.com/thalesfsp/configurer/gcpsm"
+	"github.com/thalesfsp/configurer/k8ssecret"
 	"github.com/thalesfsp/configurer/noop"
 	"github.com/thalesfsp/configurer/onepassword"
 	"github.com/thalesfsp/configurer/provider"
@@ -411,6 +412,124 @@ func TestCLIProviderSuccessPathsUseLocalFakes(t *testing.T) {
 					"token":   "dp.st.token",
 					"project": "",
 					"config":  "",
+				},
+				"override": false,
+				"rawValue": false,
+			},
+		},
+		{
+			name: "k8ssecret write binds API flags",
+			args: []string{
+				"write", "--source", sourceFile,
+				"k8ssecret",
+				"--api-server", "https://kubernetes.example.test",
+				"--namespace", "application",
+				"--secret-name", "app-secret",
+				"--token", "api-token",
+				"--token-file", "/var/run/secrets/token",
+				"--ca-cert-file", "/var/run/secrets/ca.crt",
+				"--insecure-skip-tls-verify",
+			},
+			provider: "k8ssecret",
+			wantInput: map[string]interface{}{
+				"config": map[string]interface{}{
+					"path":                  "",
+					"apiServer":             "https://kubernetes.example.test",
+					"namespace":             "application",
+					"secretName":            "app-secret",
+					"token":                 "api-token",
+					"tokenFile":             "/var/run/secrets/token",
+					"caCertFile":            "/var/run/secrets/ca.crt",
+					"insecureSkipTLSVerify": true,
+				},
+				"override": false,
+				"rawValue": false,
+			},
+		},
+		{
+			name: "k8ssecret write alias binds environment fallbacks",
+			args: []string{
+				"write", "--source", sourceFile,
+				"k8s",
+			},
+			environment: map[string]string{
+				"K8S_API_SERVER":  "https://environment-kubernetes.example.test",
+				"K8S_NAMESPACE":   "environment-namespace",
+				"K8S_SECRET_NAME": "environment-secret",
+				"K8S_TOKEN":       "environment-token",
+			},
+			provider: "k8ssecret",
+			wantInput: map[string]interface{}{
+				"config": map[string]interface{}{
+					"path":                  "",
+					"apiServer":             "https://environment-kubernetes.example.test",
+					"namespace":             "environment-namespace",
+					"secretName":            "environment-secret",
+					"token":                 "environment-token",
+					"tokenFile":             "",
+					"caCertFile":            "",
+					"insecureSkipTLSVerify": false,
+				},
+				"override": false,
+				"rawValue": false,
+			},
+		},
+		{
+			name: "k8ssecret load binds API flags and load options",
+			args: []string{
+				"--flush-interval=1ms",
+				"load",
+				"--override",
+				"--rawValue",
+				"k8ssecret",
+				"--api-server", "https://kubernetes.example.test",
+				"--namespace", "application",
+				"--secret-name", "app-secret",
+				"--token", "api-token",
+				"--token-file", "/var/run/secrets/token",
+				"--ca-cert-file", "/var/run/secrets/ca.crt",
+				"--insecure-skip-tls-verify",
+			},
+			provider: "k8ssecret",
+			wantInput: map[string]interface{}{
+				"config": map[string]interface{}{
+					"path":                  "",
+					"apiServer":             "https://kubernetes.example.test",
+					"namespace":             "application",
+					"secretName":            "app-secret",
+					"token":                 "api-token",
+					"tokenFile":             "/var/run/secrets/token",
+					"caCertFile":            "/var/run/secrets/ca.crt",
+					"insecureSkipTLSVerify": true,
+				},
+				"override": true,
+				"rawValue": true,
+			},
+		},
+		{
+			name: "k8ssecret load alias binds environment fallbacks",
+			args: []string{
+				"--flush-interval=1ms",
+				"load", "k8s",
+			},
+			environment: map[string]string{
+				"K8S_SECRET_PATH": "/mounted/secrets",
+				"K8S_API_SERVER":  "https://environment-kubernetes.example.test",
+				"K8S_NAMESPACE":   "environment-namespace",
+				"K8S_SECRET_NAME": "environment-secret",
+				"K8S_TOKEN":       "environment-token",
+			},
+			provider: "k8ssecret",
+			wantInput: map[string]interface{}{
+				"config": map[string]interface{}{
+					"path":                  "/mounted/secrets",
+					"apiServer":             "https://environment-kubernetes.example.test",
+					"namespace":             "environment-namespace",
+					"secretName":            "environment-secret",
+					"token":                 "environment-token",
+					"tokenFile":             "",
+					"caCertFile":            "",
+					"insecureSkipTLSVerify": false,
 				},
 				"override": false,
 				"rawValue": false,
@@ -1310,6 +1429,11 @@ func runCLIHelper(
 		"GCP_PROJECT_ID":                "",
 		"GCPSM_SECRET_NAME":             "",
 		"GOOGLE_CLOUD_PROJECT":          "",
+		"K8S_API_SERVER":                "",
+		"K8S_NAMESPACE":                 "",
+		"K8S_SECRET_NAME":               "",
+		"K8S_SECRET_PATH":               "",
+		"K8S_TOKEN":                     "",
 		"OP_CONNECT_HOST":               "",
 		"OP_CONNECT_TOKEN":              "",
 		"OP_ITEM":                       "",
@@ -1368,6 +1492,30 @@ func installCLIProviderFakes() {
 			"secretNames": config.SecretNames,
 			"override":    override,
 			"rawValue":    rawValue,
+		}); err != nil {
+			return nil, err
+		}
+
+		return noop.New(override, rawValue)
+	}
+
+	newK8sSecretProvider = func(
+		override, rawValue bool,
+		config *k8ssecret.Config,
+	) (provider.IProvider, error) {
+		if err := validateFakeProviderInput("k8ssecret", map[string]interface{}{
+			"config": map[string]interface{}{
+				"path":                  config.Path,
+				"apiServer":             config.APIServer,
+				"namespace":             config.Namespace,
+				"secretName":            config.SecretName,
+				"token":                 config.Token,
+				"tokenFile":             config.TokenFile,
+				"caCertFile":            config.CACertFile,
+				"insecureSkipTLSVerify": config.InsecureSkipTLSVerify,
+			},
+			"override": override,
+			"rawValue": rawValue,
 		}); err != nil {
 			return nil, err
 		}
