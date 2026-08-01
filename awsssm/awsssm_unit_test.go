@@ -14,6 +14,7 @@ import (
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/thalesfsp/configurer/internal/testenv"
 	"github.com/thalesfsp/configurer/option"
 )
 
@@ -459,7 +460,7 @@ func TestAWSSSMLoadByPath(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			httpClient, recorder := newFakeSSMHTTPClient(t, tt.responder)
 			for key, value := range tt.want {
-				t.Setenv(key, "")
+				testenv.Unset(t, key)
 				if seededValue, ok := tt.seedEnvironment[key]; ok {
 					t.Setenv(key, seededValue)
 				}
@@ -608,7 +609,7 @@ func TestAWSSSMLoadByNames(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			httpClient, recorder := newFakeSSMHTTPClient(t, tt.responder)
 			for key := range tt.want {
-				t.Setenv(key, "")
+				testenv.Unset(t, key)
 			}
 
 			awsssmProvider := newFakeAWSSSM(
@@ -681,8 +682,8 @@ func TestAWSSSMLoadCombinedSources(t *testing.T) {
 					return fakeSSMResponse{statusCode: http.StatusBadRequest}
 				}
 			})
-			t.Setenv("path-key", "")
-			t.Setenv("name-key", "")
+			testenv.Unset(t, "path-key")
+			testenv.Unset(t, "name-key")
 
 			awsssmProvider := newFakeAWSSSM(
 				t,

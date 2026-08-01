@@ -16,6 +16,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/thalesfsp/configurer/internal/testenv"
 	"github.com/thalesfsp/sypl/es/v2"
 	"github.com/thalesfsp/sypl/v2/level"
 	"github.com/thalesfsp/sypl/v2/output"
@@ -208,14 +209,15 @@ func TestCommandArgsJSON(t *testing.T) {
 
 func TestLoadFromText(t *testing.T) {
 	tests := []struct {
-		name           string
-		format         string
-		data           string
-		key            string
-		wantValue      string
-		existingValue  string
-		shouldOverride bool
-		rawValue       bool
+		name            string
+		format          string
+		data            string
+		key             string
+		wantValue       string
+		existingValue   string
+		existingPresent bool
+		shouldOverride  bool
+		rawValue        bool
 	}{
 		{
 			name:      "happy path env",
@@ -232,12 +234,35 @@ func TestLoadFromText(t *testing.T) {
 			wantValue: "42",
 		},
 		{
-			name:          "edge case existing value is preserved without override",
-			format:        "env",
-			data:          "CONFIGURER_TEXT_COLLISION=loaded\n",
-			key:           "CONFIGURER_TEXT_COLLISION",
-			existingValue: "existing",
-			wantValue:     "existing",
+			name:            "edge case existing value is preserved without override",
+			format:          "env",
+			data:            "CONFIGURER_TEXT_COLLISION=loaded\n",
+			key:             "CONFIGURER_TEXT_COLLISION",
+			existingValue:   "existing",
+			existingPresent: true,
+			wantValue:       "existing",
+		},
+		{
+			// Regression for the config-precedence inversion: an embedded
+			// development config must not overwrite a variable the runtime
+			// injected as empty when the caller asked for no override.
+			name:            "edge case present but empty existing value is preserved",
+			format:          "env",
+			data:            "CONFIGURER_TEXT_EMPTY=loaded\n",
+			key:             "CONFIGURER_TEXT_EMPTY",
+			existingValue:   "",
+			existingPresent: true,
+			wantValue:       "",
+		},
+		{
+			name:            "edge case override replaces present but empty existing value",
+			format:          "env",
+			data:            "CONFIGURER_TEXT_EMPTY_OVERRIDE=loaded\n",
+			key:             "CONFIGURER_TEXT_EMPTY_OVERRIDE",
+			existingValue:   "",
+			existingPresent: true,
+			shouldOverride:  true,
+			wantValue:       "loaded",
 		},
 		{
 			name:           "edge case raw and override options retained by provider",
@@ -252,7 +277,7 @@ func TestLoadFromText(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv(tt.key, tt.existingValue)
+			testenv.SetPresence(t, tt.key, tt.existingValue, tt.existingPresent)
 
 			loadedProvider, err := LoadFromText(
 				tt.shouldOverride,
@@ -265,9 +290,38 @@ func TestLoadFromText(t *testing.T) {
 			require.NotNil(t, loadedProvider)
 			assert.Equal(t, tt.shouldOverride, loadedProvider.GetOverride())
 			assert.Equal(t, tt.rawValue, loadedProvider.GetRawValue())
-			assert.Equal(t, tt.wantValue, os.Getenv(tt.key))
+			testenv.RequireSet(t, tt.key, tt.wantValue)
 		})
 	}
+}
+
+// TestLoadFromTextMultipleKeysPrecedence reproduces the production incident
+// that motivated this regression suite: an embedded development config is
+// loaded with shouldOverride=false while the runtime has already injected the
+// real values. Every injected variable must survive — including one injected
+// as empty — while genuinely absent keys are still populated.
+func TestLoadFromTextMultipleKeysPrecedence(t *testing.T) {
+	const (
+		injected = "CONFIGURER_TEXT_MULTI_INJECTED"
+		blank    = "CONFIGURER_TEXT_MULTI_BLANK"
+		absent   = "CONFIGURER_TEXT_MULTI_ABSENT"
+	)
+
+	testenv.SetPresence(t, injected, "mongodb://prod-atlas:27017", true)
+	testenv.SetPresence(t, blank, "", true)
+	testenv.SetPresence(t, absent, "", false)
+
+	data := injected + "=mongodb://localhost:27017\n" +
+		blank + "=devDefault\n" +
+		absent + "=devOnly\n"
+
+	loadedProvider, err := LoadFromText(false, false, "env", data)
+	require.NoError(t, err)
+	require.NotNil(t, loadedProvider)
+
+	testenv.RequireSet(t, injected, "mongodb://prod-atlas:27017")
+	testenv.RequireSet(t, blank, "")
+	testenv.RequireSet(t, absent, "devOnly")
 }
 
 func TestLoadFromTextErrors(t *testing.T) {

@@ -17,6 +17,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/thalesfsp/configurer/internal/testenv"
 	"github.com/thalesfsp/configurer/option"
 )
 
@@ -687,7 +688,7 @@ func TestAWSSMLoadUnit(t *testing.T) {
 
 			for key := range tt.want {
 				if _, exists := tt.existingEnv[key]; !exists {
-					t.Setenv(key, "")
+					testenv.Unset(t, key)
 				}
 			}
 

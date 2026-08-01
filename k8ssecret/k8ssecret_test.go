@@ -16,6 +16,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/thalesfsp/configurer/internal/testenv"
 	"github.com/thalesfsp/configurer/option"
 	"github.com/thalesfsp/configurer/provider"
 )
@@ -286,7 +287,7 @@ func TestK8sSecretLoadMounted(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			for key := range tt.want {
-				t.Setenv(key, "")
+				testenv.Unset(t, key)
 			}
 
 			created, err := New(false, false, &Config{Path: tt.setup(t)})
@@ -473,7 +474,7 @@ func TestK8sSecretLoadAPI(t *testing.T) {
 			}
 
 			for key := range tt.want {
-				t.Setenv(key, "")
+				testenv.Unset(t, key)
 			}
 
 			created, err := New(false, false, config)
@@ -524,7 +525,7 @@ func TestK8sSecretLoadAPITLS(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("K8S_TLS_KEY", "")
+			testenv.Unset(t, "K8S_TLS_KEY")
 
 			server, listener := newK8sSecretTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				assert.Equal(t, "Bearer api-token", r.Header.Get("Authorization"))

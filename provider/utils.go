@@ -26,8 +26,13 @@ func anyMaxLevel(l *sypl.Sypl, target level.Level) bool {
 // ExportToEnvVar exports the given key and value to the environment.
 //
 // NOTE: If override is `true`, it'll override existing environment variables!
+//
+// NOTE: Precedence is decided by PRESENCE, not by emptiness. A variable that is
+// already set — even to the empty string — is an explicit choice by whoever set
+// it, so it's preserved unless override is `true`. This matches the semantics of
+// godotenv and of dotenv implementations at large.
 func ExportToEnvVar(p IProvider, key string, value interface{}) (string, error) {
-	fromOsEnvValue := os.Getenv(key)
+	fromOsEnvValue, isSetInOsEnv := os.LookupEnv(key)
 
 	// Should export to the environment.
 	finalValue := fmt.Sprintf("%v", value)
@@ -37,7 +42,7 @@ func ExportToEnvVar(p IProvider, key string, value interface{}) (string, error) 
 	}
 
 	// Should allow to don't overwrite existing environment variables.
-	if fromOsEnvValue != "" && !p.GetOverride() {
+	if isSetInOsEnv && !p.GetOverride() {
 		finalValue = fromOsEnvValue
 	}
 
