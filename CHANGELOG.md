@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Backup strategy. When one provider fail, fallback to another.
 
+## [Unreleased]
+### Fixed
+- Env var precedence is now decided by PRESENCE instead of by emptiness. A
+  variable that is already set — even to the empty string — is preserved when
+  `override` is `false`. Previously `ExportToEnvVar` compared `os.Getenv(key)`
+  against `""`, so a variable set to an empty value was silently overwritten by
+  the provider value despite the caller asking for no override. This affects
+  every provider, since they all export through that helper.
+
+  **Migration:** if you relied on declaring a placeholder such as `KEY=` (e.g.
+  `docker run -e KEY=`, a Kubernetes `env` entry with `value: ""`, or a `.env`
+  placeholder) and expected configurer to fill it in, either unset the variable
+  instead of setting it empty, or enable `override` deliberately.
+
 ## [1.1.30] - 2023-03-16
 ### Changed
 - Behaves like `json` tag regarding non-exported and ignored fields.

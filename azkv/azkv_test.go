@@ -19,6 +19,7 @@ import (
 	"github.com/Azure/azure-sdk-for-go/sdk/security/keyvault/azsecrets"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/thalesfsp/configurer/internal/testenv"
 	"github.com/thalesfsp/configurer/option"
 )
 
@@ -620,7 +621,7 @@ func TestAZKVLoadConfiguredSecrets(t *testing.T) {
 			)
 
 			for key := range tt.wantValues {
-				t.Setenv(key, "")
+				testenv.Unset(t, key)
 			}
 			if tt.existingKey != "" {
 				t.Setenv(tt.existingKey, tt.existingValue)
@@ -804,7 +805,7 @@ func TestAZKVLoadListsAllSecrets(t *testing.T) {
 			tt.setup(t, fake)
 
 			for key := range tt.wantValues {
-				t.Setenv(key, "")
+				testenv.Unset(t, key)
 			}
 
 			provider := newTestAZKV(t, fake, false, false)

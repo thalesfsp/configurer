@@ -3,12 +3,12 @@ package provider
 import (
 	"context"
 	"io"
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/thalesfsp/configurer/internal/logging"
+	"github.com/thalesfsp/configurer/internal/testenv"
 	"github.com/thalesfsp/configurer/option"
 	"github.com/thalesfsp/sypl/v2"
 	"github.com/thalesfsp/sypl/v2/level"
@@ -147,16 +147,20 @@ func TestAnyMaxLevel(t *testing.T) {
 func TestExportToEnvVar(t *testing.T) {
 	const key = "CONFIGURER_PROVIDER_EXPORT_TEST"
 
+	// initialPresent distinguishes "variable absent from the environment" from
+	// "variable present and set to the empty string". Both used to be spelled
+	// initialValue: "", which is why the clobber went unnoticed.
 	tests := []struct {
-		name         string
-		key          string
-		initialValue string
-		value        interface{}
-		override     bool
-		rawValue     bool
-		logLevels    []level.Level
-		want         string
-		wantErr      bool
+		name           string
+		key            string
+		initialValue   string
+		initialPresent bool
+		value          interface{}
+		override       bool
+		rawValue       bool
+		logLevels      []level.Level
+		want           string
+		wantErr        bool
 	}{
 		{
 			name:  "exports new string",
@@ -165,19 +169,21 @@ func TestExportToEnvVar(t *testing.T) {
 			want:  "loaded",
 		},
 		{
-			name:         "existing environment value wins",
-			key:          key,
-			initialValue: "existing",
-			value:        "loaded",
-			want:         "existing",
+			name:           "existing environment value wins",
+			key:            key,
+			initialValue:   "existing",
+			initialPresent: true,
+			value:          "loaded",
+			want:           "existing",
 		},
 		{
-			name:         "override replaces existing environment value",
-			key:          key,
-			initialValue: "existing",
-			value:        "loaded",
-			override:     true,
-			want:         "loaded",
+			name:           "override replaces existing environment value",
+			key:            key,
+			initialValue:   "existing",
+			initialPresent: true,
+			value:          "loaded",
+			override:       true,
+			want:           "loaded",
 		},
 		{
 			name:  "empty incoming value remains empty",
@@ -186,11 +192,25 @@ func TestExportToEnvVar(t *testing.T) {
 			want:  "",
 		},
 		{
-			name:         "empty existing value does not block export",
-			key:          key,
-			initialValue: "",
-			value:        "loaded",
-			want:         "loaded",
+			// Regression: a variable that is SET to the empty string is still
+			// set, so it must win when override is off. The previous suite
+			// asserted the opposite ("empty existing value does not block
+			// export"), encoding the very bug it should have caught.
+			name:           "present but empty existing value is preserved",
+			key:            key,
+			initialValue:   "",
+			initialPresent: true,
+			value:          "loaded",
+			want:           "",
+		},
+		{
+			name:           "override replaces present but empty existing value",
+			key:            key,
+			initialValue:   "",
+			initialPresent: true,
+			value:          "loaded",
+			override:       true,
+			want:           "loaded",
 		},
 		{
 			name:  "special characters and multiline remain unquoted",
@@ -204,6 +224,17 @@ func TestExportToEnvVar(t *testing.T) {
 			value:    "pa$$ word=\"quoted\"\nnext=line",
 			rawValue: true,
 			want:     "\"pa$$ word=\\\"quoted\\\"\\nnext=line\"",
+		},
+		{
+			// The preserved environment value is returned byte for byte: raw
+			// formatting only ever applies to the provider-sourced value.
+			name:           "raw formatting is not applied to a preserved value",
+			key:            key,
+			initialValue:   "existing",
+			initialPresent: true,
+			value:          "loaded",
+			rawValue:       true,
+			want:           "existing",
 		},
 		{
 			name:      "debug logging branch",
@@ -232,7 +263,7 @@ func TestExportToEnvVar(t *testing.T) {
 			t.Setenv(shared.LevelEnvVar, "")
 
 			if tt.key != "INVALID=KEY" {
-				t.Setenv(tt.key, tt.initialValue)
+				testenv.SetPresence(t, tt.key, tt.initialValue, tt.initialPresent)
 			}
 
 			p := &exportTestProvider{
@@ -256,7 +287,7 @@ func TestExportToEnvVar(t *testing.T) {
 
 			require.NoError(t, err)
 			assert.Equal(t, tt.want, got)
-			assert.Equal(t, tt.want, os.Getenv(tt.key))
+			testenv.RequireSet(t, tt.key, tt.want)
 		})
 	}
 }

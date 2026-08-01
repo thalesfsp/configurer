@@ -13,6 +13,7 @@ import (
 	api "github.com/hashicorp/vault/api"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/thalesfsp/configurer/internal/testenv"
 	"github.com/thalesfsp/configurer/option"
 )
 
@@ -63,7 +64,7 @@ func cleanVaultEnvironment(t *testing.T) {
 		api.EnvVaultProxyAddr,
 		api.EnvVaultDisableRedirects,
 	} {
-		t.Setenv(key, "")
+		testenv.Unset(t, key)
 	}
 }
 
@@ -516,8 +517,8 @@ func TestVaultLoad(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cleanVaultEnvironment(t)
-			t.Setenv("TEST_DB_USER", "")
-			t.Setenv("TEST_PORT", "")
+			testenv.Unset(t, "TEST_DB_USER")
+			testenv.Unset(t, "TEST_PORT")
 			t.Setenv("VAULT_EXISTING", "from-environment")
 
 			server, requests, callCount := newVaultTestServer(t, tt.statusCode, tt.responseBody)
