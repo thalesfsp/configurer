@@ -4,7 +4,7 @@
 
 module github.com/thalesfsp/configurer
 
-go 1.25.0
+go 1.26.7
 
 require (
 	cloud.google.com/go/secretmanager v1.21.0
