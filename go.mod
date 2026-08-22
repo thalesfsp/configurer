@@ -4,7 +4,7 @@
 
 module github.com/thalesfsp/configurer
 
-go 1.25.0
+go 1.26.7
 
 require (
 	cloud.google.com/go/secretmanager v1.21.0
@@ -34,7 +34,7 @@ require (
 	github.com/thalesfsp/sypl/v2 v2.0.0
 	github.com/thalesfsp/validation v0.0.3
 	google.golang.org/api v0.288.0
-	google.golang.org/grpc v1.82.0
+	google.golang.org/grpc v1.82.1
 	gopkg.in/yaml.v2 v2.4.0
 	gopkg.in/yaml.v3 v3.0.1
 )
