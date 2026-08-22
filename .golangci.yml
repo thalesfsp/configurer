@@ -55,6 +55,13 @@ linters:
     - noinlineerr
     - embeddedstructfieldcheck
     - funcorder
+    # golangci-lint v2.5.0 (built with go1.25) can't lint a go1.26+ module, so
+    # this PR also raises GOLANGCI_VERSION to v2.9.0 (earliest release built
+    # with go1.26). That version's `modernize` linter is new to this repo and
+    # flags ~400 pre-existing interface{}/loop/reflect style points across
+    # every package -- unrelated to the CVE fix this PR makes. Disabled here
+    # for the same reason as the block above; re-enable as a dedicated PR.
+    - modernize
 
   settings:
     funlen:

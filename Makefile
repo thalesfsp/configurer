@@ -15,7 +15,7 @@ HAS_GODOC := $(shell command -v godoc;)
 HAS_GOLANGCI := $(shell command -v golangci-lint;)
 HAS_GORELEASER := $(shell command -v goreleaser;)
 
-GOLANGCI_VERSION := v2.5.0
+GOLANGCI_VERSION := v2.9.0
 GORELEASER_VERSION := v2.4.8
 
 default: ci
